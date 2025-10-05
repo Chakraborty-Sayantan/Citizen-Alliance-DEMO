@@ -1,11 +1,16 @@
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Bookmark, MapPin, Building, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 const Jobs = () => {
+  const { toast } = useToast();
+  const [savedJobs, setSavedJobs] = useState<string[]>([]);
+  
   const jobs = [
     {
       title: "Senior Frontend Developer",
@@ -40,6 +45,27 @@ const Jobs = () => {
       posted: "5 days ago"
     }
   ];
+
+  const handleSaveJob = (title: string) => {
+    if (savedJobs.includes(title)) {
+      setSavedJobs(savedJobs.filter(job => job !== title));
+      toast({
+        description: "Job removed from saved items",
+      });
+    } else {
+      setSavedJobs([...savedJobs, title]);
+      toast({
+        description: "Job saved",
+      });
+    }
+  };
+
+  const handleApply = (title: string, company: string) => {
+    toast({
+      title: "Application started",
+      description: `Applying to ${title} at ${company}`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,7 +143,7 @@ const Jobs = () => {
             <div className="space-y-3">
               {jobs.map((job, index) => (
                 <Card key={index} className="p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex gap-4 flex-1">
                       <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center">
                         <Building className="h-6 w-6 text-primary" />
@@ -148,8 +174,28 @@ const Jobs = () => {
                         <p className="text-xs text-muted-foreground">{job.posted}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon">
-                      <Bookmark className="h-5 w-5" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleSaveJob(job.title)}
+                    >
+                      <Bookmark 
+                        className={`h-5 w-5 ${savedJobs.includes(job.title) ? 'fill-primary text-primary' : ''}`}
+                      />
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1"
+                      onClick={() => handleApply(job.title, job.company)}
+                    >
+                      Apply
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleSaveJob(job.title)}
+                    >
+                      {savedJobs.includes(job.title) ? 'Saved' : 'Save'}
                     </Button>
                   </div>
                 </Card>

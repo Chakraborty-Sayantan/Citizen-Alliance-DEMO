@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Send, Paperclip, Smile, MoreVertical } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Messaging = () => {
   const [selectedChat, setSelectedChat] = useState(0);
+  const [newMessage, setNewMessage] = useState("");
+  const { toast } = useToast();
 
   const chats = [
     {
@@ -40,12 +43,41 @@ const Messaging = () => {
     }
   ];
 
-  const messages = [
+  const [messages, setMessages] = useState([
     { sender: "Sarah Johnson", text: "Hi! Thanks for accepting my connection request.", time: "10:30 AM", isMe: false },
     { sender: "You", text: "My pleasure! I saw your profile and your work looks impressive.", time: "10:32 AM", isMe: true },
     { sender: "Sarah Johnson", text: "Thanks for connecting! Let's catch up soon.", time: "10:35 AM", isMe: false },
     { sender: "You", text: "Absolutely! Would love to hear more about your projects.", time: "10:36 AM", isMe: true }
-  ];
+  ]);
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim()) return;
+    
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    setMessages([...messages, {
+      sender: "You",
+      text: newMessage,
+      time: currentTime,
+      isMe: true
+    }]);
+    
+    setNewMessage("");
+    toast({
+      description: "Message sent",
+    });
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -165,11 +197,18 @@ const Messaging = () => {
                   <Input
                     placeholder="Write a message..."
                     className="flex-1"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
                   />
                   <Button variant="ghost" size="icon">
                     <Smile className="h-5 w-5" />
                   </Button>
-                  <Button size="icon">
+                  <Button 
+                    size="icon"
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim()}
+                  >
                     <Send className="h-5 w-5" />
                   </Button>
                 </div>

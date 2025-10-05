@@ -1,10 +1,11 @@
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThumbsUp, MessageSquare, UserPlus, Briefcase, Calendar } from "lucide-react";
 
 const Notifications = () => {
-  const notifications = [
+  const [notifications, setNotifications] = useState([
     {
       type: "like",
       icon: ThumbsUp,
@@ -61,7 +62,13 @@ const Notifications = () => {
       time: "1w ago",
       unread: false
     }
-  ];
+  ]);
+
+  const handleNotificationClick = (index: number) => {
+    const updatedNotifications = [...notifications];
+    updatedNotifications[index].unread = false;
+    setNotifications(updatedNotifications);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,6 +81,7 @@ const Notifications = () => {
               {notifications.map((notification, index) => (
                 <div
                   key={index}
+                  onClick={() => handleNotificationClick(index)}
                   className={`flex items-start gap-4 p-4 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors ${
                     notification.unread ? "bg-primary/5" : ""
                   }`}

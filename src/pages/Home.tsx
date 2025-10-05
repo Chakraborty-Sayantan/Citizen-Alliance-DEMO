@@ -1,13 +1,16 @@
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import PostCard from "@/components/PostCard";
+import CreatePostDialog from "@/components/CreatePostDialog";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Image, Video, FileText } from "lucide-react";
 
 const Home = () => {
-  const posts = [
+  const [createPostOpen, setCreatePostOpen] = useState(false);
+  const [posts, setPosts] = useState([
     {
       author: "Sarah Johnson",
       title: "Product Manager at TechCorp",
@@ -32,7 +35,19 @@ const Home = () => {
       likes: 256,
       comments: 34
     }
-  ];
+  ]);
+
+  const handlePostCreated = (content: string) => {
+    const newPost = {
+      author: "John Doe",
+      title: "Senior Developer",
+      content,
+      timestamp: "Just now",
+      likes: 0,
+      comments: 0
+    };
+    setPosts([newPost, ...posts]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -49,25 +64,50 @@ const Home = () => {
                 <Avatar>
                   <AvatarFallback>JD</AvatarFallback>
                 </Avatar>
-                <Button variant="outline" className="flex-1 justify-start text-muted-foreground">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 justify-start text-muted-foreground"
+                  onClick={() => setCreatePostOpen(true)}
+                >
                   Start a post
                 </Button>
               </div>
               <div className="flex items-center justify-around">
-                <Button variant="ghost" size="sm" className="gap-2 text-primary">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2 text-primary"
+                  onClick={() => setCreatePostOpen(true)}
+                >
                   <Image className="h-5 w-5" />
                   <span className="text-sm">Photo</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="gap-2 text-green-600">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2 text-green-600"
+                  onClick={() => setCreatePostOpen(true)}
+                >
                   <Video className="h-5 w-5" />
                   <span className="text-sm">Video</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="gap-2 text-orange-600">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2 text-orange-600"
+                  onClick={() => setCreatePostOpen(true)}
+                >
                   <FileText className="h-5 w-5" />
                   <span className="text-sm">Article</span>
                 </Button>
               </div>
             </Card>
+
+            <CreatePostDialog 
+              open={createPostOpen}
+              onOpenChange={setCreatePostOpen}
+              onPostCreated={handlePostCreated}
+            />
 
             {posts.map((post, index) => (
               <PostCard key={index} {...post} />
