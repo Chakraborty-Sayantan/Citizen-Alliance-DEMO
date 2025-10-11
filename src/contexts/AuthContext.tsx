@@ -1,13 +1,7 @@
 import {  createContext,  useState,  ReactNode,} from "react";
+import type { User } from "@/lib/api";
 
-// Define a type for the user object
-export type User = {
-  name: string;
-  email: string;
-  title?: string;
-  connections?: number;
-  profileViews?: number;
-};
+export type { User };
 
 export interface AuthContextType {
   isAuthenticated: boolean;
