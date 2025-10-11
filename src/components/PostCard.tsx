@@ -13,6 +13,7 @@ import {
   Repeat2,
   Send,
   FileText,
+  UserPlus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -22,11 +23,13 @@ import {
   repostPost,
   sendPost,
   User,
+  sendConnectionRequest,
 } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "./ui/input";
+import { Link } from "react-router-dom";
 
 const PostCard = (post: Post) => {
   const [showComments, setShowComments] = useState(false);
@@ -97,6 +100,17 @@ const PostCard = (post: Post) => {
     addSuffix: true,
   });
 
+  const connectMutation = useMutation({
+    mutationFn: () =>
+      sendConnectionRequest(user as User, post.author.email),
+    onSuccess: () => {
+      toast({
+        title: "Connection Request Sent",
+        description: `Your request to connect with ${post.author.name} has been sent.`,
+      });
+    },
+  });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start gap-3 pb-3">
@@ -110,10 +124,24 @@ const PostCard = (post: Post) => {
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <h4 className="font-semibold">{post.author.name}</h4>
+          <Link to={`/profile/${post.author.email}`}>
+            <h4 className="font-semibold hover:underline">
+              {post.author.name}
+            </h4>
+          </Link>
           <p className="text-sm text-muted-foreground">{post.author.title}</p>
           <p className="text-xs text-muted-foreground">{timeAgo}</p>
         </div>
+        {user?.email !== post.author.email && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => connectMutation.mutate()}
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Connect
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <p className="text-sm">{post.content}</p>

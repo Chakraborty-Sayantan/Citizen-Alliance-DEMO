@@ -18,7 +18,7 @@ export interface User {
   email: string;
   title?: string;
   location?: string;
-  connections?: number;
+  connections: string[]; // Changed to store email of connections
   profileViews?: number;
   about?: string;
   skills?: string[];
@@ -37,7 +37,6 @@ export interface Settings {
   connectionRequests: boolean;
   jobAlerts: boolean;
 }
-
 
 export interface Post {
   id: string;
@@ -61,6 +60,11 @@ export interface NewsArticle {
   url: string;
 }
 
+export interface ConnectionRequest {
+  from: User;
+  to: string;
+}
+
 // --- MOCK API ---
 
 const getPostsFromStorage = (): Post[] => {
@@ -70,6 +74,15 @@ const getPostsFromStorage = (): Post[] => {
 
 const savePostsToStorage = (posts: Post[]) => {
   localStorage.setItem("linkledge_posts", JSON.stringify(posts));
+};
+
+const getConnectionRequestsFromStorage = (): ConnectionRequest[] => {
+  const requests = localStorage.getItem("linkledge_connection_requests");
+  return requests ? JSON.parse(requests) : [];
+};
+
+const saveConnectionRequestsToStorage = (requests: ConnectionRequest[]) => {
+  localStorage.setItem("linkledge_connection_requests", JSON.stringify(requests));
 };
 
 export const fetchPosts = async (): Promise<Post[]> => {
@@ -157,7 +170,7 @@ export const fetchNews = async (): Promise<NewsArticle[]> => {
     {
       title: "AMD's AI Surge Challenges Nvidia's Dominance",
       source: "TechNewsWorld",
-      timestamp: "2025-06-16T12:30:00Z",
+      timestamp: "2025-10-16T12:30:00Z",
       url: "https://www.technewsworld.com/section/it/developers",
     },
     {
@@ -237,4 +250,75 @@ export const updateUserSettings = async (
     JSON.stringify(updatedSettings)
   );
   return updatedSettings;
+};
+
+export const fetchAllUsers = async (): Promise<User[]> => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const users: User[] = JSON.parse(
+    localStorage.getItem("linkledge_users") || "[]"
+  );
+  return users;
+};
+
+export const sendConnectionRequest = async (
+  fromUser: User,
+  toEmail: string
+): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const requests = getConnectionRequestsFromStorage();
+  const newRequest: ConnectionRequest = { from: fromUser, to: toEmail };
+  saveConnectionRequestsToStorage([...requests, newRequest]);
+};
+
+export const fetchConnectionRequests = async (
+  userEmail: string
+): Promise<ConnectionRequest[]> => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const requests = getConnectionRequestsFromStorage();
+  return requests.filter((req) => req.to === userEmail);
+};
+
+export const acceptConnectionRequest = async (
+  request: ConnectionRequest
+): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const requests = getConnectionRequestsFromStorage();
+  saveConnectionRequestsToStorage(
+    requests.filter(
+      (req) =>
+        !(req.from.email === request.from.email && req.to === request.to)
+    )
+  );
+
+  const users: User[] = JSON.parse(
+    localStorage.getItem("linkledge_users") || "[]"
+  );
+  const toUserIndex = users.findIndex((u) => u.email === request.to);
+  const fromUserIndex = users.findIndex((u) => u.email === request.from.email);
+
+  if (toUserIndex > -1) {
+    if (!users[toUserIndex].connections.includes(request.from.email)) {
+      users[toUserIndex].connections.push(request.from.email);
+    }
+  }
+  if (fromUserIndex > -1) {
+    if (!users[fromUserIndex].connections.includes(request.to)) {
+      users[fromUserIndex].connections.push(request.to);
+    }
+  }
+
+  localStorage.setItem("linkledge_users", JSON.stringify(users));
+};
+
+export const rejectConnectionRequest = async (
+  request: ConnectionRequest
+): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const requests = getConnectionRequestsFromStorage();
+  saveConnectionRequestsToStorage(
+    requests.filter(
+      (req) =>
+        !(req.from.email === request.from.email && req.to === request.to)
+    )
+  );
 };

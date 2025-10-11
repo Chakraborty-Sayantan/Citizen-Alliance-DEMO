@@ -17,15 +17,11 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import bcrypt from "bcryptjs";
+import { User } from "@/lib/api";
 
 // Define a type for the user data stored in localStorage
-type StoredUser = {
-  name: string;
-  email: string;
+type StoredUser = User & {
   hashedPassword: string;
-  title?: string;
-  connections?: number;
-  profileViews?: number;
 };
 
 // Schema for sign-up, including the name field
@@ -99,13 +95,14 @@ const AuthForm = () => {
         email: signUpValues.email,
         hashedPassword,
         title: "New LinkLedge User",
-        connections: 0,
+        connections: [],
         profileViews: 0,
       };
       users.push(newUser);
       localStorage.setItem("linkledge_users", JSON.stringify(users));
 
-      login(newUser);
+      const { hashedPassword: _, ...userToLogin } = newUser;
+      login(userToLogin);
       toast({
         title: "Account created",
         description: "You have been successfully signed up.",
@@ -137,7 +134,8 @@ const AuthForm = () => {
         return;
       }
 
-      login(user);
+      const { hashedPassword: _, ...userToLogin } = user;
+      login(userToLogin);
       toast({
         title: "Signed in",
         description: "You have been successfully signed in.",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,18 +14,23 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchUserProfile, updateUserProfile, User } from "@/lib/api";
+import { fetchUserProfile, updateUserProfile, User, fetchAllUsers } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import ImageCropDialog from "@/components/ImageCropDialog";
 import EditProfileDialog from "@/components/EditProfileDialog";
+import { useParams, Link } from "react-router-dom";
+import ConnectionsDialog from "@/components/ConnectionsDialog";
 
 const Profile = () => {
+  const { email } = useParams<{ email: string }>();
   const { toast } = useToast();
   const { user, login } = useAuth();
   const queryClient = useQueryClient();
+  const isOwnProfile = !email || email === user?.email;
 
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [cropImage, setCropImage] = useState<{
     url: string;
     type: "profile" | "background";
@@ -36,9 +41,14 @@ const Profile = () => {
     isLoading,
     error,
   } = useQuery<User | null>({
-    queryKey: ["profile", user?.email],
-    queryFn: () => fetchUserProfile(user?.email || ""),
-    enabled: !!user?.email,
+    queryKey: ["profile", email || user?.email],
+    queryFn: () => fetchUserProfile(email || user?.email || ""),
+    enabled: !!(email || user?.email),
+  });
+
+  const { data: allUsers = [] } = useQuery<User[]>({
+    queryKey: ["users"],
+    queryFn: fetchAllUsers,
   });
 
   const profileMutation = useMutation({
@@ -118,19 +128,21 @@ const Profile = () => {
                 className="w-full h-full object-cover"
               />
             )}
-            <label
-              htmlFor="bg-upload"
-              className="absolute bottom-2 right-2 bg-card p-1.5 rounded-full cursor-pointer hover:bg-accent"
-            >
-              <Camera className="h-4 w-4" />
-              <input
-                id="bg-upload"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => handleFileSelect(e, "background")}
-              />
-            </label>
+            {isOwnProfile && (
+              <label
+                htmlFor="bg-upload"
+                className="absolute bottom-2 right-2 bg-card p-1.5 rounded-full cursor-pointer hover:bg-accent"
+              >
+                <Camera className="h-4 w-4" />
+                <input
+                  id="bg-upload"
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => handleFileSelect(e, "background")}
+                />
+              </label>
+            )}
           </div>
           <div className="px-6 pb-6">
             <div className="relative h-16">
@@ -139,25 +151,27 @@ const Profile = () => {
                   <Avatar className="h-32 w-32 border-4 border-card">
                     <AvatarImage src={profile.profileImage} />
                     <AvatarFallback className="text-3xl">
-                      {user?.name
+                      {profile.name
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <label
-                    htmlFor="avatar-upload"
-                    className="absolute bottom-2 right-2 bg-card p-1.5 rounded-full cursor-pointer hover:bg-accent"
-                  >
-                    <Camera className="h-4 w-4" />
-                    <input
-                      id="avatar-upload"
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleFileSelect(e, "profile")}
-                    />
-                  </label>
+                  {isOwnProfile && (
+                    <label
+                      htmlFor="avatar-upload"
+                      className="absolute bottom-2 right-2 bg-card p-1.5 rounded-full cursor-pointer hover:bg-accent"
+                    >
+                      <Camera className="h-4 w-4" />
+                      <input
+                        id="avatar-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleFileSelect(e, "profile")}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
             </div>
@@ -175,15 +189,23 @@ const Profile = () => {
                       {profile.location}
                     </span>
                   )}
-                  <span className="text-primary cursor-pointer hover:underline">
-                    {profile.connections} connections
-                  </span>
+                  <button
+                    onClick={() => setConnectionsOpen(true)}
+                    className="text-primary cursor-pointer hover:underline"
+                  >
+                    {profile.connections?.length || 0} connections
+                  </button>
                 </div>
               </div>
-              <Button onClick={() => setEditModalOpen(true)} className="gap-2">
-                <Edit className="h-4 w-4" />
-                Edit Profile
-              </Button>
+              {isOwnProfile && (
+                <Button
+                  onClick={() => setEditModalOpen(true)}
+                  className="gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Profile
+                </Button>
+              )}
             </div>
           </div>
         </Card>
@@ -304,6 +326,13 @@ const Profile = () => {
           onSave={(data) => profileMutation.mutate(data)}
         />
       )}
+
+      <ConnectionsDialog
+        open={connectionsOpen}
+        onOpenChange={setConnectionsOpen}
+        connections={profile.connections}
+        allUsers={allUsers}
+      />
     </div>
   );
 };

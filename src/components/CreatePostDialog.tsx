@@ -106,6 +106,7 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
         email: user.email,
         title: user.title,
         profileImage: user.profileImage,
+        connections: user.connections || [],
       },
       content,
       attachment,

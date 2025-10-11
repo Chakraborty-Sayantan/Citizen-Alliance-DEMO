@@ -49,7 +49,7 @@ const Sidebar = () => {
           <div>
             <p className="text-muted-foreground">Connections</p>
             <p className="font-semibold text-primary">
-              {user?.connections || 0}
+              {user?.connections?.length || 0}
             </p>
           </div>
           <div>
