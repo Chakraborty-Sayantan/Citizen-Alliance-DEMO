@@ -1,8 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Home, Users, Briefcase, MessageSquare, Bell, Grid3x3 } from "lucide-react";
+import {
+  Search,
+  Home,
+  Users,
+  Briefcase,
+  MessageSquare,
+  Bell,
+  Grid3x3,
+} from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,8 +78,8 @@ const Navbar = () => {
             </Link>
             <form onSubmit={handleSearch} className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search" 
+              <Input
+                placeholder="Search"
                 className="w-64 pl-10 bg-secondary/50"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -111,9 +119,15 @@ const Navbar = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleViewProfile}>View Profile</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSettings}>Settings</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>Sign Out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleViewProfile}>
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSettings}>
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  Sign Out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
