@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +40,7 @@ const CreatePostDialog = ({ open, onOpenChange, onPostCreated }: CreatePostDialo
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create a post</DialogTitle>
+          <DialogDescription>Share your thoughts with your network</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center gap-3">

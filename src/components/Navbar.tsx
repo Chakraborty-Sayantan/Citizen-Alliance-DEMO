@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Home, Users, Briefcase, MessageSquare, Bell, Grid3x3 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -10,10 +10,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout } = useAuth();
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const navItems = [
     { icon: Home, label: "Home", path: "/home" },
@@ -25,6 +30,36 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      toast({
+        title: "Search",
+        description: `Searching for: ${searchQuery}`,
+      });
+    }
+  };
+
+  const handleViewProfile = () => {
+    navigate("/profile");
+  };
+
+  const handleSettings = () => {
+    navigate("/settings");
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Signed out",
+      description: "You have been successfully signed out",
+    });
+  };
+
+  const handleBusinessClick = () => {
+    navigate("/business");
+  };
+
   return (
     <nav className="sticky top-0 z-50 bg-card border-b shadow-sm">
       <div className="container mx-auto px-6">
@@ -33,13 +68,15 @@ const Navbar = () => {
             <Link to="/home">
               <h1 className="text-xl font-bold text-primary">LinkLedge</h1>
             </Link>
-            <div className="relative hidden md:block">
+            <form onSubmit={handleSearch} className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search" 
                 className="w-64 pl-10 bg-secondary/50"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
           </div>
 
           <div className="flex items-center">
@@ -74,9 +111,9 @@ const Navbar = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>View Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem onClick={logout}>Sign Out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleViewProfile}>View Profile</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSettings}>Settings</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Sign Out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -84,6 +121,7 @@ const Navbar = () => {
               variant="ghost"
               size="sm"
               className="flex flex-col items-center gap-1 h-14 px-4 rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+              onClick={handleBusinessClick}
             >
               <Grid3x3 className="h-5 w-5" />
               <span className="text-xs hidden lg:block">For Business</span>
