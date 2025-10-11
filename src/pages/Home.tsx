@@ -4,7 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import PostCard from "@/components/PostCard";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Image, Video, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -48,6 +48,7 @@ const Home = () => {
             <Card className="p-4">
               <div className="flex items-center gap-3 mb-4">
                 <Avatar>
+                  <AvatarImage src={user?.profileImage} alt={user?.name} />
                   <AvatarFallback>
                     {user?.name
                       ? user.name

@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Image, Video, FileText, X } from "lucide-react";
@@ -104,7 +104,8 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
       author: {
         name: user.name,
         email: user.email,
-        title: "Senior Developer", // Replace with dynamic title later
+        title: user.title,
+        profileImage: user.profileImage,
       },
       content,
       attachment,
@@ -120,6 +121,7 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Avatar>
+              <AvatarImage src={user?.profileImage} alt={user?.name} />
               <AvatarFallback>
                 {user?.name
                   ? user.name

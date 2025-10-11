@@ -5,7 +5,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   ThumbsUp,
@@ -101,6 +101,7 @@ const PostCard = (post: Post) => {
     <Card>
       <CardHeader className="flex flex-row items-start gap-3 pb-3">
         <Avatar>
+          <AvatarImage src={post.author.profileImage} alt={post.author.name} />
           <AvatarFallback>
             {post.author.name
               .split(" ")
@@ -210,6 +211,10 @@ const PostCard = (post: Post) => {
               {post.comments.map((comment, index) => (
                 <div key={index} className="flex items-start gap-2">
                   <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={comment.author.profileImage}
+                      alt={comment.author.name}
+                    />
                     <AvatarFallback>
                       {comment.author.name
                         .split(" ")

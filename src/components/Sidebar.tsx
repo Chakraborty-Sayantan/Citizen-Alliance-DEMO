@@ -1,44 +1,62 @@
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Bookmark, Users, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const Sidebar = () => {
   const { user } = useAuth();
 
   return (
     <div className="space-y-4">
-      <Card className="p-0 overflow-hidden">
-        <div className="h-16 bg-gradient-to-r from-primary/20 to-primary/10"></div>
-        <div className="px-4 pb-4">
-          <Avatar className="h-16 w-16 -mt-8 border-4 border-card">
-            <AvatarFallback className="text-lg">
-              {user?.name
-                ? user.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                : "U"}
-            </AvatarFallback>
-          </Avatar>
-          <h3 className="font-semibold mt-2">{user?.name || "User Name"}</h3>
-          <p className="text-sm text-muted-foreground">
-            {user?.title || "User Title"}
-          </p>
-          <div className="flex justify-between items-center mt-4 pt-4 border-t text-sm">
-            <div>
-              <p className="text-muted-foreground">Connections</p>
-              <p className="font-semibold text-primary">
-                {user?.connections || 0}
-              </p>
+      <Card className="p-0 overflow-hidden text-center">
+        <Link to="/profile" className="hover:opacity-90 transition-opacity">
+          <div className="h-16 relative">
+            {user?.backgroundImage ? (
+              <img
+                src={user.backgroundImage}
+                alt="background"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-r from-primary/20 to-primary/10" />
+            )}
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+              <Avatar className="h-16 w-16 border-4 border-card">
+                <AvatarImage src={user?.profileImage} alt={user?.name} />
+                <AvatarFallback className="text-lg">
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                    : "U"}
+                </AvatarFallback>
+              </Avatar>
             </div>
-            <div>
-              <p className="text-muted-foreground">Profile views</p>
-              <p className="font-semibold text-primary">
-                {user?.profileViews || 0}
-              </p>
-            </div>
+          </div>
+          <div className="pt-10 px-4 pb-4">
+            <h3 className="font-semibold mt-2 hover:underline">
+              {user?.name || "User Name"}
+            </h3>
+            <p className="text-sm text-muted-foreground h-5 truncate">
+              {user?.title || ""}
+            </p>
+          </div>
+        </Link>
+        <div className="flex justify-between items-center px-4 py-4 border-t text-sm">
+          <div>
+            <p className="text-muted-foreground">Connections</p>
+            <p className="font-semibold text-primary">
+              {user?.connections || 0}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Profile views</p>
+            <p className="font-semibold text-primary">
+              {user?.profileViews || 0}
+            </p>
           </div>
         </div>
       </Card>

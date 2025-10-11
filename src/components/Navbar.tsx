@@ -17,14 +17,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -72,11 +72,16 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 bg-card border-b shadow-sm">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-14">
-          <div className="flex items-center gap-4">
-            <Link to="/home">
+          <div className="flex items-center gap-2">
+            <Link to="/home" className="flex items-center gap-2">
+              <img
+                src="/logo.jpeg"
+                alt="LinkLedge Logo"
+                className="h-8 w-8 rounded-full object-cover"
+              />
               <h1 className="text-xl font-bold text-primary">LinkLedge</h1>
             </Link>
-            <form onSubmit={handleSearch} className="relative hidden md:block">
+            <form onSubmit={handleSearch} className="relative hidden md:block ml-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search"
@@ -113,7 +118,15 @@ const Navbar = () => {
                   className="flex flex-col items-center gap-1 h-14 px-4 rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground"
                 >
                   <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs">ME</AvatarFallback>
+                    <AvatarImage src={user?.profileImage} alt={user?.name} />
+                    <AvatarFallback className="text-xs">
+                      {user?.name
+                        ? user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                        : "ME"}
+                    </AvatarFallback>
                   </Avatar>
                   <span className="text-xs hidden lg:block">Me</span>
                 </Button>
