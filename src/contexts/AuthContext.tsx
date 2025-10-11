@@ -1,16 +1,15 @@
-import {
-  createContext,
-  useState,
-  ReactNode,
-} from "react";
+import {  createContext,  useState,  ReactNode,} from "react";
 
 // Define a type for the user object
-type User = {
+export type User = {
   name: string;
   email: string;
+  title?: string;
+  connections?: number;
+  profileViews?: number;
 };
 
-interface AuthContextType {
+export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (user: User) => void;

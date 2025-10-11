@@ -3,7 +3,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage,} from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +23,9 @@ type StoredUser = {
   name: string;
   email: string;
   hashedPassword: string;
+  title?: string;
+  connections?: number;
+  profileViews?: number;
 };
 
 // Schema for sign-up, including the name field
@@ -88,11 +98,14 @@ const AuthForm = () => {
         name: signUpValues.name,
         email: signUpValues.email,
         hashedPassword,
+        title: "New LinkLedge User",
+        connections: 0,
+        profileViews: 0,
       };
       users.push(newUser);
       localStorage.setItem("linkledge_users", JSON.stringify(users));
 
-      login({ name: newUser.name, email: newUser.email });
+      login(newUser);
       toast({
         title: "Account created",
         description: "You have been successfully signed up.",
@@ -124,7 +137,7 @@ const AuthForm = () => {
         return;
       }
 
-      login({ name: user.name, email: user.email });
+      login(user);
       toast({
         title: "Signed in",
         description: "You have been successfully signed in.",
