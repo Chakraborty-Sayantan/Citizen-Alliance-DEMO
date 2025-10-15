@@ -1,3 +1,5 @@
+// src/components/AuthForm.tsx
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,40 +18,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import bcrypt from "bcryptjs";
-import { User } from "@/lib/api";
+import { login as apiLogin, register as apiRegister } from "@/lib/api";
 
-// Define a type for the user data stored in localStorage
-type StoredUser = User & {
-  hashedPassword: string;
-};
-
-// Schema for sign-up, including the name field
 const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
   password: z
     .string()
-    .min(8, { message: "Password must be at least 8 characters long" })
-    .regex(/[a-z]/, {
-      message: "Password must contain at least one lowercase letter",
-    })
-    .regex(/[A-Z]/, {
-      message: "Password must contain at least one uppercase letter",
-    })
-    .regex(/[0-9]/, { message: "Password must contain at least one number" })
-    .regex(/[^a-zA-Z0-9]/, {
-      message: "Password must contain at least one special character",
-    }),
+    .min(8, { message: "Password must be at least 8 characters long" }),
 });
 
-// Schema for sign-in, which doesn't require the name
 const signInSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(1, { message: "Password is required" }),
 });
 
-// Create inferred types from the schemas
 type SignUpValues = z.infer<typeof signUpSchema>;
 type SignInValues = z.infer<typeof signInSchema>;
 
@@ -70,77 +53,30 @@ const AuthForm = () => {
   });
 
   const onSubmit = async (values: SignUpValues | SignInValues) => {
-    const users: StoredUser[] = JSON.parse(
-      localStorage.getItem("linkledge_users") || "[]"
-    );
-
-    if (isSignUp) {
-      // Sign Up Logic
-      const signUpValues = values as SignUpValues;
-      const existingUser = users.find(
-        (user) => user.email === signUpValues.email
-      );
-      if (existingUser) {
+    try {
+      if (isSignUp) {
+        const { user, token } = await apiRegister(values as SignUpValues);
+        login(user, token);
         toast({
-          title: "Error",
-          description: "An account with this email already exists.",
-          variant: "destructive",
+          title: "Account created",
+          description: "Welcome to LinkLedge!",
         });
-        return;
+        navigate("/home");
+      } else {
+        const { user, token } = await apiLogin(values as SignInValues);
+        login(user, token);
+        toast({
+          title: "Signed in",
+          description: "Welcome back!",
+        });
+        navigate("/home");
       }
-
-      const hashedPassword = await bcrypt.hash(signUpValues.password, 10);
-      const newUser: StoredUser = {
-        name: signUpValues.name,
-        email: signUpValues.email,
-        hashedPassword,
-        title: "New LinkLedge User",
-        connections: [],
-        profileViews: 0,
-      };
-      users.push(newUser);
-      localStorage.setItem("linkledge_users", JSON.stringify(users));
-
-      const { hashedPassword: _, ...userToLogin } = newUser;
-      login(userToLogin);
+    } catch (error: any) {
       toast({
-        title: "Account created",
-        description: "You have been successfully signed up.",
+        title: "Authentication Error",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
       });
-      navigate("/home");
-    } else {
-      // Sign In Logic
-      const signInValues = values as SignInValues;
-      const user = users.find((user) => user.email === signInValues.email);
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "Invalid email or password.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const isPasswordValid = await bcrypt.compare(
-        signInValues.password,
-        user.hashedPassword
-      );
-      if (!isPasswordValid) {
-        toast({
-          title: "Error",
-          description: "Invalid email or password.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { hashedPassword: _, ...userToLogin } = user;
-      login(userToLogin);
-      toast({
-        title: "Signed in",
-        description: "You have been successfully signed in.",
-      });
-      navigate("/home");
     }
   };
 
@@ -189,11 +125,7 @@ const AuthForm = () => {
                   <FormControl>
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder={
-                        isSignUp
-                          ? "8+ characters, 1 uppercase, 1 number, 1 special"
-                          : "Password"
-                      }
+                      placeholder="••••••••"
                       {...field}
                     />
                   </FormControl>
@@ -216,7 +148,7 @@ const AuthForm = () => {
             )}
           />
           <Button type="submit" className="w-full">
-            {isSignUp ? "Join now" : "Sign in"}
+            {form.formState.isSubmitting ? 'Loading...' : (isSignUp ? "Join now" : "Sign in")}
           </Button>
         </form>
       </Form>

@@ -12,27 +12,26 @@ import {
   updateUserSettings,
   updateUserProfile,
   Settings as AppSettings,
-  User,
 } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 
 const Settings = () => {
   const { toast } = useToast();
-  const { user, login } = useAuth();
+  const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading: isLoadingSettings } =
     useQuery<AppSettings>({
       queryKey: ["settings", user?.email],
-      queryFn: () => fetchUserSettings(user?.email || ""),
+      queryFn: fetchUserSettings, // This is now correct
       enabled: !!user?.email,
     });
 
   const settingsMutation = useMutation({
-    mutationFn: (newSettings: Partial<AppSettings>) =>
-      updateUserSettings(user?.email || "", newSettings),
+    mutationFn: updateUserSettings, // This is now correct
     onSuccess: (updatedSettings) => {
       queryClient.setQueryData(["settings", user?.email], updatedSettings);
       toast({
@@ -40,29 +39,54 @@ const Settings = () => {
         description: "Your preferences have been updated.",
       });
     },
+     onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update settings.",
+        variant: "destructive",
+      });
+    },
   });
 
   const profileMutation = useMutation({
-    mutationFn: (newProfile: Partial<User>) =>
-      updateUserProfile(user?.email || "", newProfile),
+    mutationFn: updateUserProfile, // This is now correct
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(["profile", user?.email], updatedUser);
-      login(updatedUser);
+      updateUser(updatedUser);
       toast({
         title: "Account saved",
         description: "Your account information has been updated.",
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile.",
+        variant: "destructive",
+      });
+    }
   });
 
-  const { register, handleSubmit, watch } = useForm({
-    values: {
-      name: user?.name || "",
-      email: user?.email || "",
-      headline: user?.title || "",
-      location: user?.location || "",
+  const { register, handleSubmit, reset } = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      headline: "",
+      location: "",
     },
   });
+
+  useEffect(() => {
+    if (user) {
+        reset({
+            name: user.name,
+            email: user.email,
+            headline: user.title || "",
+            location: user.location || "",
+        });
+    }
+  }, [user, reset]);
+
 
   const handleAccountSave = handleSubmit((data) => {
     profileMutation.mutate({
@@ -116,7 +140,9 @@ const Settings = () => {
                   <Label htmlFor="location">Location</Label>
                   <Input id="location" {...register("location")} />
                 </div>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" disabled={profileMutation.isPending}>
+                  {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
               </form>
             </Card>
           </TabsContent>

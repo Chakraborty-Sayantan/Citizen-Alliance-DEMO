@@ -1,3 +1,4 @@
+// src/components/PostCard.tsx
 import { useState } from "react";
 import {
   Card,
@@ -20,8 +21,6 @@ import {
   Post,
   likePost,
   commentOnPost,
-  repostPost,
-  sendPost,
   User,
   sendConnectionRequest,
 } from "@/lib/api";
@@ -38,34 +37,41 @@ const PostCard = (post: Post) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  const isLiked = user ? post.likes.includes(user._id) : false;
+
   const likeMutation = useMutation({
-    mutationFn: () => likePost(post.id),
+    mutationFn: () => likePost(post._id),
     onSuccess: (updatedPost) => {
       queryClient.setQueryData(["posts"], (oldData: Post[] | undefined) =>
         oldData
-          ? oldData.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+          ? oldData.map((p) => (p._id === updatedPost._id ? updatedPost : p))
           : []
       );
-      if (updatedPost.isLiked) {
-        toast({
-          description: "You liked this post",
-        });
-      }
     },
   });
 
   const commentMutation = useMutation({
     mutationFn: (newComment: { text: string; author: User }) =>
-      commentOnPost(post.id, newComment),
+      commentOnPost(post._id, newComment),
     onSuccess: (updatedPost) => {
       queryClient.setQueryData(["posts"], (oldData: Post[] | undefined) =>
         oldData
-          ? oldData.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+          ? oldData.map((p) => (p._id === updatedPost._id ? updatedPost : p))
           : []
       );
       setCommentText("");
       toast({
         description: "Comment added",
+      });
+    },
+  });
+  
+  const connectMutation = useMutation({
+    mutationFn: () => sendConnectionRequest(post.author._id),
+    onSuccess: () => {
+      toast({
+        title: "Connection Request Sent",
+        description: `Your request to connect with ${post.author.name} has been sent.`,
       });
     },
   });
@@ -77,38 +83,8 @@ const PostCard = (post: Post) => {
     }
   };
 
-  // TODO: Implement full repost and send functionality
-  const repostMutation = useMutation({
-    mutationFn: () => repostPost(post.id),
-    onSuccess: () => {
-      toast({
-        description: "Post reposted to your network",
-      });
-    },
-  });
-
-  const sendMutation = useMutation({
-    mutationFn: () => sendPost(post.id),
-    onSuccess: () => {
-      toast({
-        description: "Post sent via message",
-      });
-    },
-  });
-
   const timeAgo = formatDistanceToNow(new Date(post.timestamp), {
     addSuffix: true,
-  });
-
-  const connectMutation = useMutation({
-    mutationFn: () =>
-      sendConnectionRequest(user as User, post.author.email),
-    onSuccess: () => {
-      toast({
-        title: "Connection Request Sent",
-        description: `Your request to connect with ${post.author.name} has been sent.`,
-      });
-    },
   });
 
   return (
@@ -137,6 +113,7 @@ const PostCard = (post: Post) => {
             variant="outline"
             size="sm"
             onClick={() => connectMutation.mutate()}
+            disabled={connectMutation.isPending}
           >
             <UserPlus className="h-4 w-4 mr-2" />
             Connect
@@ -144,14 +121,14 @@ const PostCard = (post: Post) => {
         )}
       </CardHeader>
       <CardContent>
-        <p className="text-sm">{post.content}</p>
+        <p className="text-sm whitespace-pre-wrap">{post.content}</p>
         {post.attachment && (
           <div className="mt-4">
             {post.attachment.type === "image" && (
               <img
                 src={post.attachment.url}
                 alt="Post attachment"
-                className="max-h-96 w-full rounded-md object-contain"
+                className="max-h-96 w-full rounded-md object-contain bg-muted"
               />
             )}
             {post.attachment.type === "video" && (
@@ -180,18 +157,18 @@ const PostCard = (post: Post) => {
       <CardFooter className="flex-col items-start">
         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3 pb-3 border-b w-full">
           <ThumbsUp className="h-3 w-3" />
-          <span>{post.likes} likes</span>
+          <span>{post.likes.length} likes</span>
           <span className="ml-auto">{post.comments.length} comments</span>
         </div>
         <div className="flex items-center justify-around w-full">
           <Button
             variant="ghost"
             size="sm"
-            className={`gap-2 ${post.isLiked ? "text-primary" : ""}`}
+            className={`gap-2 ${isLiked ? "text-primary" : ""}`}
             onClick={() => likeMutation.mutate()}
           >
             <ThumbsUp
-              className={`h-4 w-4 ${post.isLiked ? "fill-primary" : ""}`}
+              className={`h-4 w-4 ${isLiked ? "fill-primary" : ""}`}
             />
             <span className="text-sm">Like</span>
           </Button>
@@ -204,21 +181,12 @@ const PostCard = (post: Post) => {
             <MessageSquare className="h-4 w-4" />
             <span className="text-sm">Comment</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            onClick={() => repostMutation.mutate()}
-          >
+          {/* Repost and Send functionality can be implemented later */}
+          <Button variant="ghost" size="sm" className="gap-2" disabled>
             <Repeat2 className="h-4 w-4" />
             <span className="text-sm">Repost</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            onClick={() => sendMutation.mutate()}
-          >
+          <Button variant="ghost" size="sm" className="gap-2" disabled>
             <Send className="h-4 w-4" />
             <span className="text-sm">Send</span>
           </Button>
@@ -231,27 +199,27 @@ const PostCard = (post: Post) => {
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
               />
-              <Button type="submit" disabled={!commentText.trim()}>
+              <Button type="submit" disabled={!commentText.trim() || commentMutation.isPending}>
                 Post
               </Button>
             </form>
             <div className="space-y-4">
-              {post.comments.map((comment, index) => (
-                <div key={index} className="flex items-start gap-2">
+              {post.comments.map((comment) => (
+                <div key={comment._id} className="flex items-start gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={comment.author.profileImage}
-                      alt={comment.author.name}
+                      src={comment.user.profileImage}
+                      alt={comment.user.name}
                     />
                     <AvatarFallback>
-                      {comment.author.name
+                      {comment.user.name
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
                   <div className="bg-muted rounded-md p-2 text-sm w-full">
-                    <p className="font-semibold">{comment.author.name}</p>
+                    <p className="font-semibold">{comment.user.name}</p>
                     <p>{comment.text}</p>
                   </div>
                 </div>

@@ -119,7 +119,7 @@ const Home = () => {
             ) : postsError ? (
               <p className="text-destructive">Failed to load posts.</p>
             ) : (
-              posts?.map((post) => <PostCard key={post.id} {...post} />)
+              posts?.map((post) => <PostCard key={post._id} {...post} />)
             )}
           </div>
 

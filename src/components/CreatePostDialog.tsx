@@ -4,7 +4,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image, Video, FileText, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { createPost } from "@/lib/api";
+import { createPost, Post } from "@/lib/api"; // Import Post type if needed
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface CreatePostDialogProps {
@@ -20,12 +19,18 @@ interface CreatePostDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB for Base64 efficiency
+
+type AttachmentState = {
+  file: File;
+  preview: string;
+  type: "image" | "video" | "document";
+};
 
 const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
   const [content, setContent] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<AttachmentState | null>(null);
+
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -35,46 +40,55 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       setContent("");
-      setFile(null);
-      setPreview(null);
+      setAttachment(null);
       onOpenChange(false);
       toast({
         title: "Post created!",
         description: "Your post has been shared with your network",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to create post. Please try again.",
+        description: error.message || "Failed to create post. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
+    const file = event.target.files?.[0];
 
-    if (selectedFile) {
-      if (selectedFile.size > MAX_FILE_SIZE) {
+    if (file) {
+      if (file.size > MAX_FILE_SIZE) {
         toast({
           title: "File too large",
-          description: "Please select a file smaller than 30MB.",
+          description: "Please select a file smaller than 5MB.",
           variant: "destructive",
         });
         return;
       }
 
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
+      const fileTypeRaw = file.type.split("/")[0];
+      const fileType = fileTypeRaw === "image" || fileTypeRaw === "video" ? fileTypeRaw : "document";
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttachment({
+          file: file,
+          preview: reader.result as string,
+          type: fileType,
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handlePost = () => {
-    if (!content.trim() && !file) {
+    if (!content.trim() && !attachment) {
       toast({
         title: "Empty post",
-        description: "Please write something or add a file.",
+        description: "Please write something or add an attachment.",
         variant: "destructive",
       });
       return;
@@ -82,35 +96,30 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
 
     if (!user) {
       toast({
-        title: "Error",
+        title: "Not authenticated",
         description: "You must be logged in to post.",
         variant: "destructive",
       });
       return;
     }
+    
+    // Explicitly define the type here to match CreatePostData
+    const postData: {
+      content: string;
+      attachment?: { type: "image" | "video" | "document"; url: string; name: string };
+    } = {
+      content,
+    };
 
-    let attachment;
-    if (file) {
-      const fileType = file.type.split("/")[0];
-      attachment = {
-        type:
-          fileType === "image" || fileType === "video" ? fileType : "document",
-        url: URL.createObjectURL(file), // In a real app, this would be a URL from your storage service
-        name: file.name,
+    if (attachment) {
+      postData.attachment = {
+        type: attachment.type, // This is now correctly typed
+        url: attachment.preview,
+        name: attachment.file.name,
       };
     }
 
-    mutation.mutate({
-      author: {
-        name: user.name,
-        email: user.email,
-        title: user.title,
-        profileImage: user.profileImage,
-        connections: user.connections || [],
-      },
-      content,
-      attachment,
-    });
+    mutation.mutate(postData);
   };
 
   return (
@@ -145,37 +154,33 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
             className="min-h-[120px] resize-none border-0 focus-visible:ring-0 text-base"
           />
 
-          {preview && (
+          {attachment && (
             <div className="relative">
-              {file?.type.startsWith("image/") && (
+              {attachment.type === 'image' && (
                 <img
-                  src={preview}
+                  src={attachment.preview}
                   alt="Preview"
-                  className="max-h-60 w-full rounded-md object-contain"
+                  className="max-h-60 w-full rounded-md object-contain bg-muted"
                 />
               )}
-              {file?.type.startsWith("video/") && (
+              {attachment.type === 'video' && (
                 <video
-                  src={preview}
+                  src={attachment.preview}
                   controls
                   className="max-h-60 w-full rounded-md"
                 />
               )}
-              {!file?.type.startsWith("image/") &&
-                !file?.type.startsWith("video/") && (
+              {attachment.type === 'document' && (
                   <div className="flex items-center gap-2 rounded-md border p-2">
                     <FileText className="h-6 w-6" />
-                    <span className="text-sm">{file?.name}</span>
+                    <span className="text-sm">{attachment.file.name}</span>
                   </div>
                 )}
               <Button
                 variant="destructive"
                 size="icon"
                 className="absolute top-2 right-2 h-6 w-6"
-                onClick={() => {
-                  setFile(null);
-                  setPreview(null);
-                }}
+                onClick={() => setAttachment(null)}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -186,53 +191,24 @@ const CreatePostDialog = ({ open, onOpenChange }: CreatePostDialogProps) => {
             <div className="flex gap-2">
               <input
                 type="file"
-                id="image-upload"
+                id="file-upload"
                 className="hidden"
-                accept="image/*"
+                accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                 onChange={handleFileChange}
               />
               <Button
                 variant="ghost"
                 size="sm"
                 className="gap-2 text-primary"
-                onClick={() => document.getElementById("image-upload")?.click()}
+                onClick={() => document.getElementById("file-upload")?.click()}
               >
                 <Image className="h-5 w-5" />
-              </Button>
-              <input
-                type="file"
-                id="video-upload"
-                className="hidden"
-                accept="video/*"
-                onChange={handleFileChange}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 text-green-600"
-                onClick={() => document.getElementById("video-upload")?.click()}
-              >
-                <Video className="h-5 w-5" />
-              </Button>
-              <input
-                type="file"
-                id="doc-upload"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt"
-                onChange={handleFileChange}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 text-orange-600"
-                onClick={() => document.getElementById("doc-upload")?.click()}
-              >
-                <FileText className="h-5 w-5" />
+                 <span className="text-sm">Media</span>
               </Button>
             </div>
             <Button
               onClick={handlePost}
-              disabled={(!content.trim() && !file) || mutation.isPending}
+              disabled={(!content.trim() && !attachment) || mutation.isPending}
             >
               {mutation.isPending ? "Posting..." : "Post"}
             </Button>

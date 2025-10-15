@@ -1,24 +1,27 @@
 export interface Experience {
-  id: string;
+  _id: string;
   title: string;
   company: string;
-  date: string;
+  startDate: Date;
+  endDate: string | Date;
   description?: string;
 }
 
 export interface Education {
-  id: string;
+  _id: string;
   school: string;
   degree: string;
-  date: string;
+  startDate: Date;
+  endDate: string | Date;
 }
 
 export interface User {
+  _id: string;
   name: string;
   email: string;
   title?: string;
   location?: string;
-  connections: string[]; // Changed to store email of connections
+  connections: User[];
   profileViews?: number;
   about?: string;
   skills?: string[];
@@ -26,6 +29,7 @@ export interface User {
   education?: Education[];
   profileImage?: string;
   backgroundImage?: string;
+  connectionRequests?: User[];
 }
 
 export interface Settings {
@@ -39,13 +43,17 @@ export interface Settings {
 }
 
 export interface Post {
-  id: string;
+  _id: string;
   author: User;
   content: string;
   timestamp: string;
-  likes: number;
-  comments: { text: string; author: User }[];
-  isLiked: boolean;
+  likes: string[];
+  comments: {
+    _id: string;
+    text: string;
+    user: User;
+    createdAt: string;
+  }[];
   attachment?: {
     type: "image" | "video" | "document";
     url: string;
@@ -60,106 +68,187 @@ export interface NewsArticle {
   url: string;
 }
 
-export interface ConnectionRequest {
-  from: User;
-  to: string;
-}
-
-// --- MOCK API ---
-
-const getPostsFromStorage = (): Post[] => {
-  const posts = localStorage.getItem("linkledge_posts");
-  return posts ? JSON.parse(posts) : [];
+// --- Specific types for API function arguments ---
+type RegisterData = {
+  name: string;
+  email: string;
+  password: string
 };
-
-const savePostsToStorage = (posts: Post[]) => {
-  localStorage.setItem("linkledge_posts", JSON.stringify(posts));
+type LoginData = {
+  email: string;
+  password: string
 };
-
-const getConnectionRequestsFromStorage = (): ConnectionRequest[] => {
-  const requests = localStorage.getItem("linkledge_connection_requests");
-  return requests ? JSON.parse(requests) : [];
-};
-
-const saveConnectionRequestsToStorage = (requests: ConnectionRequest[]) => {
-  localStorage.setItem("linkledge_connection_requests", JSON.stringify(requests));
-};
-
-export const fetchPosts = async (): Promise<Post[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return getPostsFromStorage().sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
-};
-
-export const createPost = async (
-  post: Omit<Post, "id" | "likes" | "comments" | "isLiked" | "timestamp">
-): Promise<Post> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const posts = getPostsFromStorage();
-  const newPost: Post = {
-    ...post,
-    id: new Date().toISOString(),
-    likes: 0,
-    comments: [],
-    isLiked: false,
-    timestamp: new Date().toISOString(),
+type CreatePostData = {
+  content: string;
+  attachment?: {
+    type: "image" | "video" | "document";
+    url: string;
+    name?: string;
   };
-  const updatedPosts = [newPost, ...posts];
-  savePostsToStorage(updatedPosts);
-  return newPost;
+};
+
+// --- API CONFIG ---
+const API_URL = "http://localhost:5000/api";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
+
+// --- AUTH ---
+export const register = async (userData: RegisterData) => {
+    const res = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+    });
+    if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.msg || 'Failed to register');
+    }
+    return res.json();
+};
+
+export const login = async (credentials: LoginData) => {
+    const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+    });
+    if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.msg || 'Failed to login');
+    }
+    return res.json();
+};
+
+// --- POSTS ---
+export const fetchPosts = async (): Promise<Post[]> => {
+  const res = await fetch(`${API_URL}/posts`);
+  if (!res.ok) throw new Error("Failed to fetch posts");
+  return res.json();
+};
+
+export const createPost = async (postData: CreatePostData): Promise<Post> => {
+  const res = await fetch(`${API_URL}/posts`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(postData),
+  });
+  if (!res.ok) throw new Error("Failed to create post");
+  return res.json();
 };
 
 export const likePost = async (postId: string): Promise<Post> => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const posts = getPostsFromStorage();
-  const postIndex = posts.findIndex((p) => p.id === postId);
-
-  if (postIndex === -1) {
-    throw new Error("Post not found");
-  }
-
-  const post = posts[postIndex];
-  post.isLiked = !post.isLiked;
-  post.likes = post.isLiked ? post.likes + 1 : post.likes - 1;
-
-  posts[postIndex] = post;
-  savePostsToStorage(posts);
-  return post;
+  const res = await fetch(`${API_URL}/posts/${postId}/like`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to like post");
+  return res.json();
 };
 
-export const commentOnPost = async (
-  postId: string,
-  comment: { text: string; author: User }
-): Promise<Post> => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const posts = getPostsFromStorage();
-  const postIndex = posts.findIndex((p) => p.id === postId);
-
-  if (postIndex === -1) {
-    throw new Error("Post not found");
-  }
-
-  const post = posts[postIndex];
-  post.comments.push(comment);
-
-  posts[postIndex] = post;
-  savePostsToStorage(posts);
-  return post;
+export const commentOnPost = async (postId: string, comment: { text: string }): Promise<Post> => {
+  const res = await fetch(`${API_URL}/posts/${postId}/comment`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(comment),
+  });
+  if (!res.ok) throw new Error("Failed to add comment");
+  return res.json();
 };
 
-export const repostPost = async (postId: string): Promise<void> => {
-  console.log(`Reposting post ${postId}`);
-  await new Promise((resolve) => setTimeout(resolve, 300));
+// --- USERS & PROFILE ---
+export const fetchUserProfile = async (email: string): Promise<User | null> => {
+  const res = await fetch(`${API_URL}/users/profile/${email}`);
+  if (!res.ok) return null;
+  return res.json();
 };
 
-export const sendPost = async (postId: string): Promise<void> => {
-  console.log(`Sending post ${postId}`);
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export const updateUserProfile = async (profileData: Partial<User>): Promise<User> => {
+  const res = await fetch(`${API_URL}/users/profile`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(profileData),
+  });
+  if (!res.ok) throw new Error("Failed to update profile");
+  return res.json();
 };
 
+export const fetchAllUsers = async (): Promise<User[]> => {
+  const res = await fetch(`${API_URL}/users`);
+  if (!res.ok) throw new Error("Failed to fetch users");
+  return res.json();
+};
+
+// --- SETTINGS ---
+export const fetchUserSettings = async (): Promise<Settings> => {
+    const res = await fetch(`${API_URL}/users/settings`, {
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to fetch settings");
+    return res.json();
+};
+
+export const updateUserSettings = async (settingsData: Partial<Settings>): Promise<Settings> => {
+    const res = await fetch(`${API_URL}/users/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(settingsData),
+    });
+    if (!res.ok) throw new Error("Failed to update settings");
+    return res.json();
+};
+
+// --- CONNECTIONS ---
+export const sendConnectionRequest = async (toUserId: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/users/connections/request`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ toUserId })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.msg || "Failed to send connection request");
+    }
+};
+
+export const fetchConnectionRequests = async (): Promise<User[]> => {
+    const res = await fetch(`${API_URL}/users/connections/requests`, {
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to fetch connection requests");
+    return res.json();
+};
+
+export const acceptConnectionRequest = async (fromUserId: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/users/connections/accept`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ fromUserId })
+    });
+    if (!res.ok) throw new Error("Failed to accept connection request");
+};
+
+export const rejectConnectionRequest = async (fromUserId: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/users/connections/reject`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ fromUserId })
+    });
+    if (!res.ok) throw new Error("Failed to reject connection request");
+};
+
+// --- MOCKED NEWS ---
 export const fetchNews = async (): Promise<NewsArticle[]> => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
+  // This remains a mock as it fetches external data
   return [
     {
       title: "OpenAI DevDay 2025: ChatGPT gets apps, AgentKit, and cheaper models",
@@ -187,138 +276,4 @@ export const fetchNews = async (): Promise<NewsArticle[]> => {
       url: "https://www.infoq.com/",
     },
   ];
-};
-
-export const fetchUserProfile = async (email: string): Promise<User | null> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const users: User[] = JSON.parse(
-    localStorage.getItem("linkledge_users") || "[]"
-  );
-  const user = users.find((u) => u.email === email);
-  return user || null;
-};
-
-export const updateUserProfile = async (
-  email: string,
-  profileData: Partial<User>
-): Promise<User> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const users: User[] = JSON.parse(
-    localStorage.getItem("linkledge_users") || "[]"
-  );
-  const userIndex = users.findIndex((u) => u.email === email);
-
-  if (userIndex === -1) {
-    throw new Error("User not found");
-  }
-
-  users[userIndex] = { ...users[userIndex], ...profileData };
-  localStorage.setItem("linkledge_users", JSON.stringify(users));
-
-  return users[userIndex];
-};
-
-export const fetchUserSettings = async (
-  email: string
-): Promise<Settings> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const settings = JSON.parse(
-    localStorage.getItem(`linkledge_settings_${email}`) || "{}"
-  );
-  // Return default settings if none are found
-  return {
-    emailNotifications: true,
-    profileVisibility: true,
-    messageNotifications: true,
-    activityStatus: true,
-    allowSearchEngines: true,
-    connectionRequests: true,
-    jobAlerts: true,
-    ...settings,
-  };
-};
-
-export const updateUserSettings = async (
-  email: string,
-  settingsData: Partial<Settings>
-): Promise<Settings> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const currentSettings = await fetchUserSettings(email);
-  const updatedSettings = { ...currentSettings, ...settingsData };
-  localStorage.setItem(
-    `linkledge_settings_${email}`,
-    JSON.stringify(updatedSettings)
-  );
-  return updatedSettings;
-};
-
-export const fetchAllUsers = async (): Promise<User[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const users: User[] = JSON.parse(
-    localStorage.getItem("linkledge_users") || "[]"
-  );
-  return users;
-};
-
-export const sendConnectionRequest = async (
-  fromUser: User,
-  toEmail: string
-): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const requests = getConnectionRequestsFromStorage();
-  const newRequest: ConnectionRequest = { from: fromUser, to: toEmail };
-  saveConnectionRequestsToStorage([...requests, newRequest]);
-};
-
-export const fetchConnectionRequests = async (
-  userEmail: string
-): Promise<ConnectionRequest[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const requests = getConnectionRequestsFromStorage();
-  return requests.filter((req) => req.to === userEmail);
-};
-
-export const acceptConnectionRequest = async (
-  request: ConnectionRequest
-): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const requests = getConnectionRequestsFromStorage();
-  saveConnectionRequestsToStorage(
-    requests.filter(
-      (req) =>
-        !(req.from.email === request.from.email && req.to === request.to)
-    )
-  );
-
-  const users: User[] = JSON.parse(
-    localStorage.getItem("linkledge_users") || "[]"
-  );
-  const toUserIndex = users.findIndex((u) => u.email === request.to);
-  const fromUserIndex = users.findIndex((u) => u.email === request.from.email);
-
-  if (toUserIndex > -1) {
-    if (!users[toUserIndex].connections.includes(request.from.email)) {
-      users[toUserIndex].connections.push(request.from.email);
-    }
-  }
-  if (fromUserIndex > -1) {
-    if (!users[fromUserIndex].connections.includes(request.to)) {
-      users[fromUserIndex].connections.push(request.to);
-    }
-  }
-
-  localStorage.setItem("linkledge_users", JSON.stringify(users));
-};
-
-export const rejectConnectionRequest = async (
-  request: ConnectionRequest
-): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const requests = getConnectionRequestsFromStorage();
-  saveConnectionRequestsToStorage(
-    requests.filter(
-      (req) =>
-        !(req.from.email === request.from.email && req.to === request.to)
-    )
-  );
 };

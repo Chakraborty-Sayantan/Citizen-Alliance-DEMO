@@ -1,17 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/Navbar";
-import {
-  MapPin,
-  Briefcase,
-  GraduationCap,
-  Edit,
-  Camera,
-} from "lucide-react";
+import { MapPin, Briefcase, GraduationCap, Edit, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserProfile, updateUserProfile, User, fetchAllUsers } from "@/lib/api";
@@ -19,15 +13,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import ImageCropDialog from "@/components/ImageCropDialog";
 import EditProfileDialog from "@/components/EditProfileDialog";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import ConnectionsDialog from "@/components/ConnectionsDialog";
+import { format, isValid } from "date-fns";
 
 const Profile = () => {
   const { email } = useParams<{ email: string }>();
   const { toast } = useToast();
-  const { user, login } = useAuth();
+  const { user: currentUser, updateUser } = useAuth();
   const queryClient = useQueryClient();
-  const isOwnProfile = !email || email === user?.email;
+  const isOwnProfile = !email || email === currentUser?.email;
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
@@ -36,27 +31,25 @@ const Profile = () => {
     type: "profile" | "background";
   } | null>(null);
 
+  const profileEmail = isOwnProfile ? currentUser?.email : email;
+
   const {
     data: profile,
     isLoading,
     error,
   } = useQuery<User | null>({
-    queryKey: ["profile", email || user?.email],
-    queryFn: () => fetchUserProfile(email || user?.email || ""),
-    enabled: !!(email || user?.email),
-  });
-
-  const { data: allUsers = [] } = useQuery<User[]>({
-    queryKey: ["users"],
-    queryFn: fetchAllUsers,
+    queryKey: ["profile", profileEmail],
+    queryFn: () => fetchUserProfile(profileEmail || ""),
+    enabled: !!profileEmail,
   });
 
   const profileMutation = useMutation({
-    mutationFn: (profileData: Partial<User>) =>
-      updateUserProfile(user?.email || "", profileData),
+    mutationFn: (profileData: Partial<User>) => updateUserProfile(profileData),
     onSuccess: (updatedUser) => {
-      queryClient.setQueryData(["profile", user?.email], updatedUser);
-      login(updatedUser); // Update the user in the auth context
+      queryClient.invalidateQueries({ queryKey: ["profile", currentUser?.email] });
+      if (isOwnProfile) {
+        updateUser(updatedUser);
+      }
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
@@ -93,6 +86,27 @@ const Profile = () => {
     }
   };
 
+  const formatDateRange = (startDate: Date, endDate: string | Date) => {
+    const start = new Date(startDate);
+    if (!isValid(start)) {
+      return "Date not set";
+    }
+
+    const startFormatted = format(start, "MMM yyyy");
+
+    if (endDate === "Present") {
+      return `${startFormatted} - Present`;
+    }
+
+    const end = new Date(endDate);
+    if (!isValid(end)) {
+        return startFormatted;
+    }
+
+    const endFormatted = format(end, "MMM yyyy");
+    return `${startFormatted} - ${endFormatted}`;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-secondary/30">
@@ -109,7 +123,7 @@ const Profile = () => {
       <div className="min-h-screen bg-secondary/30">
         <Navbar />
         <main className="container mx-auto px-6 py-6 max-w-4xl">
-          <p className="text-destructive">Failed to load profile.</p>
+          <p className="text-destructive text-center">Failed to load profile or user not found.</p>
         </main>
       </div>
     );
@@ -233,7 +247,7 @@ const Profile = () => {
               <div className="space-y-6">
                 {profile.experience?.length ? (
                   profile.experience.map((exp) => (
-                    <div key={exp.id} className="flex gap-4">
+                    <div key={exp._id} className="flex gap-4">
                       <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
                         <Briefcase className="h-6 w-6 text-primary" />
                       </div>
@@ -243,7 +257,7 @@ const Profile = () => {
                           {exp.company}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {exp.date}
+                          {formatDateRange(exp.startDate, exp.endDate)}
                         </p>
                         <p className="text-sm mt-2 whitespace-pre-wrap">
                           {exp.description}
@@ -266,7 +280,7 @@ const Profile = () => {
               <div className="space-y-6">
                 {profile.education?.length ? (
                   profile.education.map((edu) => (
-                    <div key={edu.id} className="flex gap-4">
+                    <div key={edu._id} className="flex gap-4">
                       <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
                         <GraduationCap className="h-6 w-6 text-primary" />
                       </div>
@@ -276,7 +290,7 @@ const Profile = () => {
                           {edu.degree}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {edu.date}
+                          {formatDateRange(edu.startDate, edu.endDate)}
                         </p>
                       </div>
                     </div>
@@ -327,12 +341,13 @@ const Profile = () => {
         />
       )}
 
-      <ConnectionsDialog
-        open={connectionsOpen}
-        onOpenChange={setConnectionsOpen}
-        connections={profile.connections}
-        allUsers={allUsers}
-      />
+      {profile.connections && (
+        <ConnectionsDialog
+            open={connectionsOpen}
+            onOpenChange={setConnectionsOpen}
+            connections={profile.connections}
+        />
+      )}
     </div>
   );
 };
