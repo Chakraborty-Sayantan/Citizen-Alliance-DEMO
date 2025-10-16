@@ -1,5 +1,7 @@
 import Post from '../models/Post.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
+
 
 // @desc    Get all posts
 // @route   GET /api/posts
@@ -9,6 +11,14 @@ export const getPosts = async (req, res) => {
     const posts = await Post.find()
       .populate('author', 'name title profileImage email')
       .populate('comments.user', 'name title profileImage email')
+      .populate('originalPost')
+      .populate({
+        path: 'originalPost',
+        populate: {
+          path: 'author',
+          select: 'name title profileImage email'
+        }
+      })
       .sort({ timestamp: -1 });
     res.json(posts);
   } catch (err) {
@@ -16,6 +26,22 @@ export const getPosts = async (req, res) => {
     res.status(500).send('Server Error');
   }
 };
+
+// @desc    Get posts by user
+// @route   GET /api/posts/user/:userId
+// @access  Public
+export const getPostsByUser = async (req, res) => {
+    try {
+        const posts = await Post.find({ author: req.params.userId })
+            .populate('author', 'name title profileImage email')
+            .populate('comments.user', 'name title profileImage email')
+            .sort({ timestamp: -1 });
+        res.json(posts);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+}
 
 // @desc    Create a post
 // @route   POST /api/posts
@@ -51,21 +77,34 @@ export const likePost = async (req, res) => {
       return res.status(404).json({ msg: 'Post not found' });
     }
 
-    // Check if the post has already been liked by this user
-    if (post.likes.some((like) => like.equals(req.user.id))) {
-      // Unlike the post
-      post.likes = post.likes.filter(
-        (like) => !like.equals(req.user.id)
-      );
+    const isLiked = post.likes.some((like) => like.equals(req.user.id));
+
+    if (isLiked) {
+      post.likes = post.likes.filter((like) => !like.equals(req.user.id));
     } else {
-      // Like the post
       post.likes.push(req.user.id);
+
+      if (post.author.toString() !== req.user.id) {
+        const notification = new Notification({
+            user: post.author,
+            sender: req.user.id,
+            type: 'like',
+            post: post._id,
+        });
+        await notification.save();
+        const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email').populate('post', '_id');
+        
+        // Emit to specific user if they are online
+        const recipientSocketId = req.users[post.author.toString()];
+        if (recipientSocketId) {
+            req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
+        }
+      }
     }
 
     await post.save();
     await post.populate('author', 'name title profileImage email');
     await post.populate('comments.user', 'name title profileImage email');
-
 
     res.json(post);
   } catch (err) {
@@ -92,14 +131,147 @@ export const commentOnPost = async (req, res) => {
 
     post.comments.unshift(newComment);
 
+    if (post.author.toString() !== req.user.id) {
+        const notification = new Notification({
+            user: post.author,
+            sender: req.user.id,
+            type: 'comment',
+            post: post._id,
+        });
+        await notification.save();
+        const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email').populate('post', '_id');
+        const recipientSocketId = req.users[post.author.toString()];
+        if (recipientSocketId) {
+            req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
+        }
+    }
+
     await post.save();
     await post.populate('author', 'name title profileImage email');
     await post.populate('comments.user', 'name title profileImage email');
-
 
     res.json(post);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
+  }
+};
+
+// @desc    Reply to a comment
+// @route   POST /api/posts/:postId/comment/:commentId/reply
+// @access  Private
+export const replyToComment = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.postId);
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
+
+        const comment = post.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ msg: 'Comment not found' });
+
+        const newReply = {
+            text: req.body.text,
+            user: req.user.id,
+        };
+
+        comment.replies.push(newReply);
+        
+        if (comment.user.toString() !== req.user.id) {
+            const notification = new Notification({
+                user: comment.user,
+                sender: req.user.id,
+                type: 'reply',
+                post: post._id,
+            });
+            await notification.save();
+            const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email').populate('post', '_id');
+            const recipientSocketId = req.users[comment.user.toString()];
+            if (recipientSocketId) {
+                req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
+            }
+        }
+
+        await post.save();
+        await post.populate('author', 'name title profileImage email');
+        await post.populate('comments.user', 'name title profileImage email');
+
+        res.json(post);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+}
+
+
+// @desc    Delete a post
+// @route   DELETE /api/posts/:id
+// @access  Private
+export const deletePost = async (req, res) => {
+  try {
+      const post = await Post.findById(req.params.id);
+      if (!post) {
+          return res.status(404).json({ msg: 'Post not found' });
+      }
+      if (post.author.toString() !== req.user.id) {
+          return res.status(401).json({ msg: 'User not authorized' });
+      }
+      await post.deleteOne();
+      res.json({ msg: 'Post removed' });
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+  }
+}
+
+// @desc    Repost a post
+// @route   POST /api/posts/:id/repost
+// @access  Private
+export const repostPost = async (req, res) => {
+  try {
+      const originalPost = await Post.findById(req.params.id);
+
+      if (!originalPost) {
+          return res.status(404).json({ msg: 'Original post not found' });
+      }
+
+      const newPost = new Post({
+          content: req.body.content,
+          author: req.user.id,
+          originalPost: originalPost._id,
+          isRepost: true,
+      });
+
+      const repost = await newPost.save();
+
+      originalPost.reposts.push(repost._id);
+      await originalPost.save();
+
+      if (originalPost.author.toString() !== req.user.id) {
+          const notification = new Notification({
+              user: originalPost.author,
+              sender: req.user.id,
+              type: 'repost',
+              post: originalPost._id,
+          });
+          await notification.save();
+          const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email').populate('post', '_id');
+          const recipientSocketId = req.users[originalPost.author.toString()];
+          if (recipientSocketId) {
+              req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
+          }
+      }
+      
+      await repost.populate('author', 'name title profileImage email');
+      await repost.populate({
+          path: 'originalPost',
+          populate: {
+              path: 'author',
+              select: 'name title profileImage email'
+          }
+      });
+
+      res.json(repost);
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
   }
 };

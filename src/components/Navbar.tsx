@@ -20,6 +20,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 const Navbar = () => {
   const location = useLocation();
@@ -27,6 +28,7 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const { unreadCount } = useNotifications();
 
   const navItems = [
     { icon: Home, label: "Home", path: "/home" },
@@ -98,7 +100,7 @@ const Navbar = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`flex flex-col items-center gap-1 h-14 px-4 rounded-none border-b-2 ${
+                  className={`relative flex flex-col items-center gap-1 h-14 px-4 rounded-none border-b-2 ${
                     isActive(item.path)
                       ? "border-primary text-primary"
                       : "border-transparent text-muted-foreground hover:text-foreground"
@@ -106,6 +108,9 @@ const Navbar = () => {
                 >
                   <item.icon className="h-5 w-5" />
                   <span className="text-xs hidden lg:block">{item.label}</span>
+                  {item.label === "Notifications" && unreadCount > 0 && (
+                    <span className="absolute top-3 right-3 block h-2 w-2 rounded-full bg-destructive" />
+                  )}
                 </Button>
               </Link>
             ))}

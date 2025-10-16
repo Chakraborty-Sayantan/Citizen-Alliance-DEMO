@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -115,6 +116,19 @@ export const sendConnectionRequest = async (req, res) => {
         toUser.connectionRequests.push(fromUser._id);
         await toUser.save();
 
+        const notification = new Notification({
+            user: toUser._id,
+            sender: fromUser._id,
+            type: 'connection_request',
+        });
+        await notification.save();
+        const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email');
+        
+        const recipientSocketId = req.users[toUser._id.toString()];
+        if (recipientSocketId) {
+            req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
+        }
+
         res.status(200).json({ msg: 'Connection request sent' });
     } catch (err) {
         console.error(err.message);
@@ -138,6 +152,7 @@ export const getConnectionRequests = async (req, res) => {
 // @desc    Accept connection request
 // @route   POST /api/users/connections/accept
 // @access  Private
+
 export const acceptConnectionRequest = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -154,6 +169,19 @@ export const acceptConnectionRequest = async (req, res) => {
 
         await user.save();
         await fromUser.save();
+
+        const notification = new Notification({
+            user: fromUser._id,
+            sender: user._id,
+            type: 'connection_accepted',
+        });
+        await notification.save();
+        const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email');
+        
+        const recipientSocketId = req.users[fromUser._id.toString()];
+        if (recipientSocketId) {
+            req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
+        }
 
         res.status(200).json({ msg: 'Connection accepted' });
 
@@ -185,3 +213,28 @@ export const rejectConnectionRequest = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// @desc    Disconnect from a user
+// @route   DELETE /api/users/connections/:userId
+// @access  Private
+export const disconnectUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const otherUser = await User.findById(req.params.userId);
+
+        if (!otherUser) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        user.connections = user.connections.filter(connId => !connId.equals(otherUser._id));
+        otherUser.connections = otherUser.connections.filter(connId => !connId.equals(user._id));
+
+        await user.save();
+        await otherUser.save();
+
+        res.status(200).json({ msg: 'User disconnected' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+}

@@ -1,15 +1,6 @@
 import express from 'express';
-import {
-  getAllUsers,
-  getUserProfile,
-  updateUserProfile,
-  getUserSettings,
-  updateUserSettings,
-  sendConnectionRequest,
-  getConnectionRequests,
-  acceptConnectionRequest,
-  rejectConnectionRequest,
-} from '../controllers/userController.js';
+import {  getAllUsers,  getUserProfile,  updateUserProfile,  getUserSettings,  updateUserSettings,  sendConnectionRequest,  getConnectionRequests,
+  acceptConnectionRequest,  rejectConnectionRequest,  disconnectUser,} from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -22,5 +13,7 @@ router.route('/connections/request').post(protect, sendConnectionRequest);
 router.route('/connections/requests').get(protect, getConnectionRequests);
 router.route('/connections/accept').post(protect, acceptConnectionRequest);
 router.route('/connections/reject').post(protect, rejectConnectionRequest);
+router.route('/connections/:userId').delete(protect, disconnectUser);
+
 
 export default router;

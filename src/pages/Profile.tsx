@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import { MapPin, Briefcase, GraduationCap, Edit, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchUserProfile, updateUserProfile, User, fetchAllUsers } from "@/lib/api";
+import { fetchUserProfile, updateUserProfile, User, fetchPostsByUser, Post } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import ImageCropDialog from "@/components/ImageCropDialog";
@@ -16,6 +16,7 @@ import EditProfileDialog from "@/components/EditProfileDialog";
 import { useParams } from "react-router-dom";
 import ConnectionsDialog from "@/components/ConnectionsDialog";
 import { format, isValid } from "date-fns";
+import PostCard from "@/components/PostCard";
 
 const Profile = () => {
   const { email } = useParams<{ email: string }>();
@@ -42,6 +43,12 @@ const Profile = () => {
     queryFn: () => fetchUserProfile(profileEmail || ""),
     enabled: !!profileEmail,
   });
+
+  const { data: posts, isLoading: isLoadingPosts } = useQuery<Post[]>({
+      queryKey: ["profilePosts", profile?._id],
+      queryFn: () => fetchPostsByUser(profile?._id || ""),
+      enabled: !!profile,
+  })
 
   const profileMutation = useMutation({
     mutationFn: (profileData: Partial<User>) => updateUserProfile(profileData),
@@ -227,6 +234,7 @@ const Profile = () => {
         <Tabs defaultValue="about" className="mt-6">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="about">About</TabsTrigger>
+            <TabsTrigger value="posts">Posts</TabsTrigger>
             <TabsTrigger value="experience">Experience</TabsTrigger>
             <TabsTrigger value="education">Education</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>
@@ -239,6 +247,10 @@ const Profile = () => {
                 {profile.about || "No information provided."}
               </p>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="posts" className="mt-4 space-y-4">
+              {isLoadingPosts ? <Skeleton className="h-48 w-full" /> : posts?.map(post => <PostCard key={post._id} {...post} />)}
           </TabsContent>
 
           <TabsContent value="experience" className="mt-4">

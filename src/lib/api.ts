@@ -53,12 +53,21 @@ export interface Post {
     text: string;
     user: User;
     createdAt: string;
+    replies: {
+        _id: string;
+        text: string;
+        user: User;
+        createdAt: string;
+    }[];
   }[];
   attachment?: {
     type: "image" | "video" | "document";
     url: string;
     name?: string;
   };
+  isRepost?: boolean;
+  originalPost?: Post;
+  reposts: string[];
 }
 
 export interface NewsArticle {
@@ -66,6 +75,15 @@ export interface NewsArticle {
   source: string;
   timestamp: string;
   url: string;
+}
+
+export interface Notification {
+    _id: string;
+    type: 'like' | 'comment' | 'reply' | 'repost' | 'connection_request' | 'connection_accepted';
+    sender: User;
+    post?: Post;
+    read: boolean;
+    timestamp: string;
 }
 
 // --- Specific types for API function arguments ---
@@ -135,6 +153,12 @@ export const fetchPosts = async (): Promise<Post[]> => {
   return res.json();
 };
 
+export const fetchPostsByUser = async (userId: string): Promise<Post[]> => {
+    const res = await fetch(`${API_URL}/posts/user/${userId}`);
+    if (!res.ok) throw new Error("Failed to fetch user posts");
+    return res.json();
+}
+
 export const createPost = async (postData: CreatePostData): Promise<Post> => {
   const res = await fetch(`${API_URL}/posts`, {
     method: "POST",
@@ -163,6 +187,36 @@ export const commentOnPost = async (postId: string, comment: { text: string }): 
   if (!res.ok) throw new Error("Failed to add comment");
   return res.json();
 };
+
+export const replyToComment = async (postId: string, commentId: string, reply: { text: string }): Promise<Post> => {
+    const res = await fetch(`${API_URL}/posts/${postId}/comment/${commentId}/reply`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(reply),
+    });
+    if (!res.ok) throw new Error("Failed to add reply");
+    return res.json();
+}
+
+
+export const deletePost = async (postId: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/posts/${postId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete post');
+}
+
+export const repostPost = async (postId: string, content?: string): Promise<Post> => {
+    const res = await fetch(`${API_URL}/posts/${postId}/repost`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ content }),
+    });
+    if (!res.ok) throw new Error('Failed to repost');
+    return res.json();
+}
+
 
 // --- USERS & PROFILE ---
 export const fetchUserProfile = async (email: string): Promise<User | null> => {
@@ -245,10 +299,36 @@ export const rejectConnectionRequest = async (fromUserId: string): Promise<void>
     if (!res.ok) throw new Error("Failed to reject connection request");
 };
 
-// --- MOCKED NEWS ---
+export const disconnectUser = async (userId: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/users/connections/${userId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to disconnect user");
+}
+
+// --- NOTIFICATIONS ---
+export const fetchNotifications = async (): Promise<Notification[]> => {
+    const res = await fetch(`${API_URL}/notifications`, {
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to fetch notifications");
+    return res.json();
+};
+
+export const markAllNotificationsAsRead = async (): Promise<{msg: string}> => {
+    const res = await fetch(`${API_URL}/notifications/read`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to mark notifications as read");
+    return res.json();
+};
+
+
+// --- MOCKED DATA ---
 export const fetchNews = async (): Promise<NewsArticle[]> => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  // This remains a mock as it fetches external data
   return [
     {
       title: "OpenAI DevDay 2025: ChatGPT gets apps, AgentKit, and cheaper models",
@@ -261,19 +341,6 @@ export const fetchNews = async (): Promise<NewsArticle[]> => {
       source: "TechNewsWorld",
       timestamp: "2025-10-16T12:30:00Z",
       url: "https://www.technewsworld.com/section/it/developers",
-    },
-    {
-      title: "The Top Trends in Tech: McKinsey Technology Trends Outlook 2025",
-      source: "McKinsey",
-      timestamp: "2025-07-22T12:30:00Z",
-      url: "https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-top-trends-in-tech",
-    },
-    {
-      title:
-        "Google DeepMind Launches Gemini 2.5 Computer Use Model to Power AI Agents",
-      source: "InfoQ",
-      timestamp: "2025-10-09T12:00:00Z",
-      url: "https://www.infoq.com/",
     },
   ];
 };

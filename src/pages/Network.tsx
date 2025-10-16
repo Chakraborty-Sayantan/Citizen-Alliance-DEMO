@@ -2,7 +2,7 @@ import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Ensure AvatarImage is imported
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; 
 import { Users, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -68,7 +68,6 @@ const Network = () => {
         title: "Invitation sent",
         description: `Connection request sent to ${targetUser?.name}`,
       });
-       // Optimistically remove the user from suggestions
       queryClient.setQueryData(['users'], (oldData: User[] | undefined) => 
         oldData ? oldData.filter(u => u._id !== toUserId) : []
       );
@@ -82,7 +81,8 @@ const Network = () => {
     }
   });
 
-  const currentUserConnectionIds = currentUser?.connections.map(c => c._id) || [];
+  const currentUserConnectionIds =
+    currentUser?.connections?.map((c) => (typeof c === "string" ? c : c._id)) || [];
   const invitationIds = invitations?.map(inv => inv._id) || [];
 
   const suggestions =
@@ -192,7 +192,6 @@ const Network = () => {
                       <Card key={person._id} className="p-4">
                         <div className="text-center">
                           <Avatar className="h-20 w-20 mx-auto mb-3">
-                            {/* THIS WAS THE MISSING LINE */}
                             <AvatarImage src={person.profileImage} /> 
                             <AvatarFallback className="text-xl">
                               {person.name

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +16,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Business from "./pages/Business";
 import NotFound from "./pages/NotFound";
+import io from 'socket.io-client';
 
 const queryClient = new QueryClient();
 
@@ -23,9 +25,29 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/" />;
 };
 
+const SocketManager = () => {
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (user) {
+            const socket = io("http://localhost:5000");
+            socket.on('connect', () => {
+                socket.emit('register', user._id);
+            });
+
+            return () => {
+                socket.disconnect();
+            };
+        }
+    }, [user]);
+
+    return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <SocketManager />
       <TooltipProvider>
         <Toaster />
         <Sonner />
