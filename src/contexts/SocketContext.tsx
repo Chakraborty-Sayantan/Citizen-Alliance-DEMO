@@ -14,20 +14,25 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (user?._id) {
-      const newSocket = io('http://localhost:5000');
-      
-      newSocket.on('connect', () => {
-        newSocket.emit('register', user._id);
+      // Pass userId in the query to identify the user on the backend
+      const newSocket = io('http://localhost:5000', {
+        query: {
+          userId: user._id,
+        },
       });
 
       setSocket(newSocket);
 
+      // Cleanup on component unmount or user logout
       return () => {
         newSocket.close();
       };
-    } else if (socket) {
-      socket.close();
-      setSocket(null);
+    } else {
+      // If user logs out, close the existing socket
+      if (socket) {
+        socket.close();
+        setSocket(null);
+      }
     }
   }, [user]);
 

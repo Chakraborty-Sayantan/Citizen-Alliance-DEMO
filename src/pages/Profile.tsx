@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/Navbar";
-import { MapPin, Briefcase, GraduationCap, Edit, Camera, UserPlus } from "lucide-react";
+import { MapPin, Briefcase, GraduationCap, Edit, Camera, UserPlus, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserProfile, updateUserProfile, User, fetchPostsByUser, Post, sendConnectionRequest } from "@/lib/api";
@@ -13,13 +13,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import ImageCropDialog from "@/components/ImageCropDialog";
 import EditProfileDialog from "@/components/EditProfileDialog";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import ConnectionsDialog from "@/components/ConnectionsDialog";
 import { format, isValid } from "date-fns";
 import PostCard from "@/components/PostCard";
 
 const Profile = () => {
   const { email } = useParams<{ email: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { user: currentUser, updateUser } = useAuth();
   const queryClient = useQueryClient();
@@ -86,6 +87,10 @@ const Profile = () => {
       });
     },
   });
+
+  const handleMessageClick = () => {
+    navigate('/messaging', { state: { selectedUser: profile } });
+  };
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -234,24 +239,24 @@ const Profile = () => {
                   </button>
                 </div>
               </div>
-              {isOwnProfile ? (
-                <Button
-                  onClick={() => setEditModalOpen(true)}
-                  className="gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Profile
-                </Button>
-              ) : !isConnected && (
-                <Button
-                  onClick={() => connectMutation.mutate()}
-                  className="gap-2"
-                  disabled={connectMutation.isPending}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Connect
-                </Button>
-              )}
+               <div className="flex gap-2">
+                {isOwnProfile ? (
+                  <Button onClick={() => setEditModalOpen(true)} className="gap-2">
+                    <Edit className="h-4 w-4" />
+                    Edit Profile
+                  </Button>
+                ) : isConnected ? (
+                  <Button onClick={handleMessageClick} className="gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Message
+                  </Button>
+                ) : (
+                  <Button onClick={() => connectMutation.mutate()} className="gap-2" disabled={connectMutation.isPending}>
+                    <UserPlus className="h-4 w-4" />
+                    Connect
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </Card>

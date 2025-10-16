@@ -71,6 +71,23 @@ export interface Post {
   reposts: string[];
 }
 
+export interface Conversation {
+  _id: string;
+  participants: User[];
+  messages: Message[];
+}
+
+export interface Message {
+  _id: string;
+  senderId: string;
+  receiverId: string;
+  message?: string;
+  fileUrl?: string;
+  fileType?: 'image' | 'video' | 'document';
+  createdAt: string;
+  shouldShake?: boolean;
+}
+
 export interface NewsArticle {
   title: string;
   source: string;
@@ -235,13 +252,43 @@ export const repostPost = async (postId: string, content?: string): Promise<Post
     return res.json();
 }
 
+// --- MESSAGING ---
+export const getConversations = async (): Promise<Conversation[]> => {
+  const res = await fetch(`${API_URL}/messages/conversations`, {
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch conversations");
+  return res.json();
+}
+
+export const getMessages = async (userId: string): Promise<Message[]> => {
+  const res = await fetch(`${API_URL}/messages/${userId}`, {
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch messages");
+  return res.json();
+}
+
+export const sendMessage = async (userId: string, formData: FormData): Promise<Message> => {
+  const res = await fetch(`${API_URL}/messages/send/${userId}`, {
+      method: 'POST',
+      headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: formData,
+  });
+  if (!res.ok) throw new Error("Failed to send message");
+  return res.json();
+}
 
 // --- USERS & PROFILE ---
-export const fetchUserProfile = async (email: string): Promise<User | null> => {
-  const res = await fetch(`${API_URL}/users/profile/${email}`);
-  if (!res.ok) return null;
+export const fetchUserProfile = async (email: string): Promise<User> => {
+  const res = await fetch(`${API_URL}/users/profile/${email}`, {
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch user profile");
   return res.json();
-};
+}
 
 export const updateUserProfile = async (profileData: Partial<User>): Promise<User> => {
   const res = await fetch(`${API_URL}/users/profile`, {
@@ -279,6 +326,15 @@ export const updateUserSettings = async (settingsData: Partial<Settings>): Promi
 };
 
 // --- CONNECTIONS ---
+
+export const getConnections = async (): Promise<User[]> => {
+  const res = await fetch(`${API_URL}/users/connections`, {
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch connections");
+  return res.json();
+}
+
 export const sendConnectionRequest = async (toUserId: string): Promise<void> => {
     const res = await fetch(`${API_URL}/users/connections/request`, {
         method: 'POST',

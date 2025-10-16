@@ -1,32 +1,23 @@
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 
-// @desc    Get all users
-// @route   GET /api/users
-// @access  Public
-export const getAllUsers = async (req, res) => {
-    try {
-        const users = await User.find().select('-password');
-        res.json(users);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-};
-
-// @desc    Get user profile by email
+// @desc    Fetch user profile by email
 // @route   GET /api/users/profile/:email
-// @access  Public
-export const getUserProfile = async (req, res) => {
+// @access  Private
+export const fetchUserProfile = async (req, res) => {
     try {
-        const user = await User.findOne({ email: req.params.email }).select('-password').populate('connections', 'name email title profileImage');
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
+        const user = await User.findOne({ email: req.params.email })
+            .select('-password')
+            .populate('connections', 'name profileImage title email')
+            .populate('connectionRequests', 'name profileImage title email');
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(404).json({ message: 'User not found' });
         }
-        res.json(user);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+    } catch (error) {
+        console.error("Error in fetchUserProfile: ", error.message);
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -35,7 +26,7 @@ export const getUserProfile = async (req, res) => {
 // @access  Private
 export const updateUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user._id);
 
         if (user) {
             user.name = req.body.name || user.name;
@@ -45,65 +36,47 @@ export const updateUserProfile = async (req, res) => {
             user.skills = req.body.skills || user.skills;
             user.experience = req.body.experience || user.experience;
             user.education = req.body.education || user.education;
-            user.profileImage = req.body.profileImage || user.profileImage;
-            user.backgroundImage = req.body.backgroundImage || user.backgroundImage;
+            if (req.body.profileImage) {
+                user.profileImage = req.body.profileImage;
+            }
+            if (req.body.backgroundImage) {
+                user.backgroundImage = req.body.backgroundImage;
+            }
 
             const updatedUser = await user.save();
             res.json(updatedUser);
         } else {
             res.status(404).json({ message: 'User not found' });
         }
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+    } catch (error) {
+        console.error("Error in updateUserProfile: ", error.message);
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
-// @desc    Get user settings
-// @route   GET /api/users/settings
+// @desc    Search for users by keyword
+// @route   GET /api/users/search
 // @access  Private
-export const getUserSettings = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-        if (user) {
-            res.json(user.settings);
-        } else {
-            res.status(404).json({ message: 'User not found' });
+export const searchUsers = async (req, res) => {
+    const keyword = req.query.keyword
+        ? {
+            name: {
+                $regex: req.query.keyword,
+                $options: 'i',
+            },
         }
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
+        : {};
+    const users = await User.find({ ...keyword }).find({ _id: { $ne: req.user._id } });
+    res.json(users);
 };
 
-// @desc    Update user settings
-// @route   PUT /api/users/settings
-// @access  Private
-export const updateUserSettings = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-
-        if (user) {
-            user.settings = { ...user.settings, ...req.body };
-            await user.save();
-            res.json(user.settings);
-        } else {
-            res.status(404).json({ message: 'User not found' });
-        }
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-};
-
-
-// @desc    Send connection request
-// @route   POST /api/users/connections/request
+// @desc    Send a connection request to a user
+// @route   POST /api/users/connect/:userId
 // @access  Private
 export const sendConnectionRequest = async (req, res) => {
     try {
-        const toUser = await User.findById(req.body.toUserId);
-        const fromUser = await User.findById(req.user.id);
+        const toUser = await User.findById(req.params.userId);
+        const fromUser = await User.findById(req.user._id);
 
         if (!toUser) {
             return res.status(404).json({ msg: 'User not found' });
@@ -120,14 +93,9 @@ export const sendConnectionRequest = async (req, res) => {
             user: toUser._id,
             sender: fromUser._id,
             type: 'connection_request',
+            message: `${fromUser.name} sent you a connection request.`
         });
         await notification.save();
-        const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email');
-        
-        const recipientSocketId = req.users[toUser._id.toString()];
-        if (recipientSocketId) {
-            req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
-        }
 
         res.status(200).json({ msg: 'Connection request sent' });
     } catch (err) {
@@ -136,105 +104,73 @@ export const sendConnectionRequest = async (req, res) => {
     }
 };
 
-// @desc    Get incoming connection requests
-// @route   GET /api/users/connections/requests
+// @desc    Accept a connection request from a user
+// @route   POST /api/users/accept/:userId
 // @access  Private
-export const getConnectionRequests = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).populate('connectionRequests', 'name email title profileImage');
-        res.json(user.connectionRequests);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-};
-
-// @desc    Accept connection request
-// @route   POST /api/users/connections/accept
-// @access  Private
-
 export const acceptConnectionRequest = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        const fromUser = await User.findById(req.body.fromUserId);
+        const fromUser = await User.findById(req.params.userId);
+        const currentUser = await User.findById(req.user._id);
 
         if (!fromUser) {
             return res.status(404).json({ msg: 'User not found' });
         }
 
-        user.connections.push(fromUser._id);
-        fromUser.connections.push(user._id);
+        currentUser.connections.push(fromUser._id);
+        fromUser.connections.push(currentUser._id);
 
-        user.connectionRequests = user.connectionRequests.filter(reqId => !reqId.equals(fromUser._id));
+        currentUser.connectionRequests = currentUser.connectionRequests.filter(reqId => !reqId.equals(fromUser._id));
 
-        await user.save();
+        await currentUser.save();
         await fromUser.save();
 
         const notification = new Notification({
             user: fromUser._id,
-            sender: user._id,
+            sender: currentUser._id,
             type: 'connection_accepted',
+            message: `${currentUser.name} accepted your connection request.`
         });
         await notification.save();
-        const populatedNotification = await Notification.findById(notification._id).populate('sender', 'name profileImage email');
-        
-        const recipientSocketId = req.users[fromUser._id.toString()];
-        if (recipientSocketId) {
-            req.io.to(recipientSocketId).emit('new_notification', populatedNotification);
-        }
 
         res.status(200).json({ msg: 'Connection accepted' });
-
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 };
 
-// @desc    Reject connection request
-// @route   POST /api/users/connections/reject
+// @desc    Get all notifications for the logged-in user
+// @route   GET /api/users/notifications
 // @access  Private
-export const rejectConnectionRequest = async (req, res) => {
+export const getNotifications = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        const fromUser = await User.findById(req.body.fromUserId);
-
-        if (!fromUser) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-
-        user.connectionRequests = user.connectionRequests.filter(reqId => !reqId.equals(fromUser._id));
-        await user.save();
-
-        res.status(200).json({ msg: 'Connection rejected' });
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        const notifications = await Notification.find({ user: req.user._id })
+            .populate('sender', 'name profileImage')
+            .sort({ createdAt: -1 });
+        res.json(notifications);
+    } catch (error) {
+        console.error("Error in getNotifications: ", error.message);
+        res.status(500).json({ message: "Server Error" });
     }
 };
 
-// @desc    Disconnect from a user
-// @route   DELETE /api/users/connections/:userId
+// @desc    Get all connections for the logged-in user
+// @route   GET /api/users/connections
 // @access  Private
-export const disconnectUser = async (req, res) => {
+export const getConnections = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        const otherUser = await User.findById(req.params.userId);
+        const user = await User.findById(req.user._id).populate({
+            path: 'connections',
+            select: 'name profileImage email'
+        });
 
-        if (!otherUser) {
-            return res.status(404).json({ msg: 'User not found' });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
         }
 
-        user.connections = user.connections.filter(connId => !connId.equals(otherUser._id));
-        otherUser.connections = otherUser.connections.filter(connId => !connId.equals(user._id));
-
-        await user.save();
-        await otherUser.save();
-
-        res.status(200).json({ msg: 'User disconnected' });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(200).json(user.connections);
+    } catch (error) {
+        console.error("Error in getConnections: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
     }
-}
+};

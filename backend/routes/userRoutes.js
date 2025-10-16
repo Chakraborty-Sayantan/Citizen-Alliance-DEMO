@@ -1,19 +1,23 @@
 import express from 'express';
-import {  getAllUsers,  getUserProfile,  updateUserProfile,  getUserSettings,  updateUserSettings,  sendConnectionRequest,  getConnectionRequests,
-  acceptConnectionRequest,  rejectConnectionRequest,  disconnectUser,} from '../controllers/userController.js';
+import {
+  fetchUserProfile,
+  updateUserProfile,
+  searchUsers,
+  sendConnectionRequest,
+  acceptConnectionRequest,
+  getNotifications,
+  getConnections
+} from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.route('/').get(getAllUsers);
-router.route('/profile').put(protect, updateUserProfile);
-router.route('/profile/:email').get(getUserProfile);
-router.route('/settings').get(protect, getUserSettings).put(protect, updateUserSettings);
-router.route('/connections/request').post(protect, sendConnectionRequest);
-router.route('/connections/requests').get(protect, getConnectionRequests);
-router.route('/connections/accept').post(protect, acceptConnectionRequest);
-router.route('/connections/reject').post(protect, rejectConnectionRequest);
-router.route('/connections/:userId').delete(protect, disconnectUser);
-
+router.get('/profile/:email', protect, fetchUserProfile);
+router.put('/profile', protect, updateUserProfile);
+router.get('/search', protect, searchUsers);
+router.post('/connect/:userId', protect, sendConnectionRequest);
+router.post('/accept/:userId', protect, acceptConnectionRequest);
+router.get('/notifications', protect, getNotifications);
+router.get('/connections', protect, getConnections);
 
 export default router;
