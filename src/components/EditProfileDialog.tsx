@@ -1,15 +1,6 @@
-// src/components/EditProfileDialog.tsx
-
 import { useState } from "react";
 import { format, isValid } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+import {  Dialog,  DialogContent,  DialogHeader,  DialogTitle,  DialogFooter,  DialogClose,} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,31 +9,16 @@ import { User } from "@/lib/api";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import {  Form, FormControl,  FormField,  FormItem,  FormLabel,  FormMessage,} from "@/components/ui/form";
 import { X, CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import {  Command,  CommandEmpty,  CommandGroup,  CommandInput,  CommandItem,  CommandList,} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
-// --- Enhanced Schemas ---
-// Base object for date range logic
+
 const dateRangeSchemaBase = z.object({
   _id: z.string().optional(),
   startDate: z.date({ required_error: "Start date is required." }),
@@ -50,7 +26,7 @@ const dateRangeSchemaBase = z.object({
   isPresent: z.boolean().optional(),
 });
 
-// Refined schema with conditional validation for the date range
+
 const refinedDateRangeSchema = dateRangeSchemaBase.refine(data => {
   if (!data.isPresent) {
     return data.endDate instanceof Date;
@@ -61,8 +37,7 @@ const refinedDateRangeSchema = dateRangeSchemaBase.refine(data => {
   path: ["endDate"],
 });
 
-// CORRECTED: Extend the base schema first, then apply the refinement logic.
-// This is not strictly needed after restructuring but shows the correct pattern.
+
 const experienceSchema = dateRangeSchemaBase.extend({
   title: z.string().min(1, "Title is required"),
   company: z.string().min(1, "Company is required"),
@@ -170,8 +145,8 @@ const EditProfileDialog = ({ open, onOpenChange, profile, onSave }: EditProfileD
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 {skillFields.map((field, index) => (
-                  <Badge key={field.id} variant="secondary" className="flex items-center gap-2">
-                    {field.value}
+                  <Badge key={field.id} className="flex items-center gap-2 min-w-[100px] justify-between">
+                    <span>{field.value}</span>
                     <button type="button" onClick={() => removeSkill(index)}><X className="h-3 w-3" /></button>
                   </Badge>
                 ))}

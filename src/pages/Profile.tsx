@@ -310,7 +310,7 @@ const Profile = () => {
               <div className="flex flex-wrap gap-2">
                 {profile.skills?.length ? (
                   profile.skills.map((skill, i) => (
-                    <Badge key={i}>{skill}</Badge>
+                    <Badge key={i} className="min-w-[80px] justify-center">{skill}</Badge>
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">
