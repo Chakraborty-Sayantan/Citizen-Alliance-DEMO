@@ -53,6 +53,7 @@ export interface Post {
     text: string;
     user: User;
     createdAt: string;
+    likes: string[];
     replies: {
         _id: string;
         text: string;
@@ -153,6 +154,14 @@ export const fetchPosts = async (): Promise<Post[]> => {
   return res.json();
 };
 
+export const fetchPostById = async (postId: string): Promise<Post> => {
+    const res = await fetch(`${API_URL}/posts/${postId}`, {
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to fetch post");
+    return res.json();
+};
+
 export const fetchPostsByUser = async (userId: string): Promise<Post[]> => {
     const res = await fetch(`${API_URL}/posts/user/${userId}`);
     if (!res.ok) throw new Error("Failed to fetch user posts");
@@ -187,6 +196,15 @@ export const commentOnPost = async (postId: string, comment: { text: string }): 
   if (!res.ok) throw new Error("Failed to add comment");
   return res.json();
 };
+
+export const likeComment = async (postId: string, commentId: string): Promise<Post> => {
+    const res = await fetch(`${API_URL}/posts/${postId}/comment/${commentId}/like`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to like comment");
+    return res.json();
+}
 
 export const replyToComment = async (postId: string, commentId: string, reply: { text: string }): Promise<Post> => {
     const res = await fetch(`${API_URL}/posts/${postId}/comment/${commentId}/reply`, {

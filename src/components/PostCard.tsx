@@ -28,6 +28,7 @@ import {
   deletePost,
   repostPost,
   replyToComment,
+  likeComment,
 } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -64,6 +65,11 @@ const PostCard = (post: Post) => {
   const displayPost = post.isRepost && post.originalPost ? post.originalPost : post;
 
   const isLiked = user ? displayPost.likes.includes(user._id) : false;
+  const isOwnPost = user?._id === displayPost.author._id;
+  const isConnected = user?.connections?.some(
+    (connection: User | string) =>
+      (typeof connection === 'string' ? connection : connection._id) === displayPost.author._id
+  );
 
   const likeMutation = useMutation({
     mutationFn: () => likePost(displayPost._id),
@@ -133,6 +139,13 @@ const PostCard = (post: Post) => {
       }
   })
 
+  const commentLikeMutation = useMutation({
+    mutationFn: ({ postId, commentId }: { postId: string, commentId: string }) => likeComment(postId, commentId),
+    onSuccess: (updatedPost) => {
+        queryClient.setQueryData(['posts'], (oldData: Post[] | undefined) => oldData ? oldData.map(p => p._id === updatedPost._id ? updatedPost : p) : []);
+    }
+  })
+
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (commentText.trim() && user) {
@@ -178,7 +191,7 @@ const PostCard = (post: Post) => {
           <p className="text-sm text-muted-foreground">{displayPost.author.title}</p>
           <p className="text-xs text-muted-foreground">{timeAgo}</p>
         </div>
-        {user?._id === post.author._id &&
+        {isOwnPost ? (
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -208,17 +221,16 @@ const PostCard = (post: Post) => {
               </AlertDialog>
             </DropdownMenuContent>
           </DropdownMenu>
-        }
-        {user?.email !== displayPost.author.email && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => connectMutation.mutate()}
-            disabled={connectMutation.isPending}
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Connect
-          </Button>
+        ) : !isConnected && (
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => connectMutation.mutate()}
+                disabled={connectMutation.isPending}
+            >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Connect
+            </Button>
         )}
       </CardHeader>
       <CardContent>
@@ -321,9 +333,20 @@ const PostCard = (post: Post) => {
                   <div className="bg-muted rounded-md p-2 text-sm w-full">
                     <p className="font-semibold">{comment.user.name}</p>
                     <p>{comment.text}</p>
-                    <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}>
-                        Reply
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => commentLikeMutation.mutate({ postId: displayPost._id, commentId: comment._id })}>
+                          Like
+                      </Button>
+                      <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}>
+                          Reply
+                      </Button>
+                    </div>
+                    {comment.likes && comment.likes.length > 0 && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <ThumbsUp className="h-3 w-3" />
+                        <span>{comment.likes.length}</span>
+                      </div>
+                    )}
 
                     {/* Replies Section */}
                     <div className="mt-2 space-y-2 pl-4 border-l">

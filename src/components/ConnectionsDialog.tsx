@@ -21,7 +21,7 @@ const ConnectionsDialog = ({
   onOpenChange,
   connections,
 }: ConnectionsDialogProps) => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
@@ -29,6 +29,10 @@ const ConnectionsDialog = ({
         mutationFn: disconnectUser,
         onSuccess: (_, userId) => {
             queryClient.invalidateQueries({ queryKey: ["profile", user?.email] });
+            if (user) {
+                const updatedConnections = user.connections.filter(c => (typeof c === 'string' ? c : c._id) !== userId);
+                updateUser({ connections: updatedConnections });
+            }
             toast({
                 title: "Disconnected",
                 description: "You have successfully disconnected from this user."

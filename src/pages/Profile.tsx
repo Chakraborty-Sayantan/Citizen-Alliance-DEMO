@@ -5,10 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/Navbar";
-import { MapPin, Briefcase, GraduationCap, Edit, Camera } from "lucide-react";
+import { MapPin, Briefcase, GraduationCap, Edit, Camera, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchUserProfile, updateUserProfile, User, fetchPostsByUser, Post } from "@/lib/api";
+import { fetchUserProfile, updateUserProfile, User, fetchPostsByUser, Post, sendConnectionRequest } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import ImageCropDialog from "@/components/ImageCropDialog";
@@ -50,6 +50,11 @@ const Profile = () => {
       enabled: !!profile,
   })
 
+  const isConnected = currentUser?.connections?.some(
+    (connection: User | string) =>
+      (typeof connection === 'string' ? connection : connection._id) === profile?._id
+  );
+
   const profileMutation = useMutation({
     mutationFn: (profileData: Partial<User>) => updateUserProfile(profileData),
     onSuccess: (updatedUser) => {
@@ -67,6 +72,17 @@ const Profile = () => {
         title: "Error",
         description: "Failed to update profile.",
         variant: "destructive",
+      });
+    },
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: () => sendConnectionRequest(profile?._id || ""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", profileEmail] });
+      toast({
+        title: "Connection Request Sent",
+        description: `Your request to connect with ${profile?.name} has been sent.`,
       });
     },
   });
@@ -218,13 +234,22 @@ const Profile = () => {
                   </button>
                 </div>
               </div>
-              {isOwnProfile && (
+              {isOwnProfile ? (
                 <Button
                   onClick={() => setEditModalOpen(true)}
                   className="gap-2"
                 >
                   <Edit className="h-4 w-4" />
                   Edit Profile
+                </Button>
+              ) : !isConnected && (
+                <Button
+                  onClick={() => connectMutation.mutate()}
+                  className="gap-2"
+                  disabled={connectMutation.isPending}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Connect
                 </Button>
               )}
             </div>

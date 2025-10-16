@@ -16,7 +16,9 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Business from "./pages/Business";
 import NotFound from "./pages/NotFound";
-import io from 'socket.io-client';
+import PostPage from "./pages/PostPage";
+import { SocketProvider } from "./contexts/SocketContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 const queryClient = new QueryClient();
 
@@ -25,111 +27,103 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/" />;
 };
 
-const SocketManager = () => {
-    const { user } = useAuth();
-
-    useEffect(() => {
-        if (user) {
-            const socket = io("http://localhost:5000");
-            socket.on('connect', () => {
-                socket.emit('register', user._id);
-            });
-
-            return () => {
-                socket.disconnect();
-            };
-        }
-    }, [user]);
-
-    return null;
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <SocketManager />
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/jobs"
-              element={
-                <ProtectedRoute>
-                  <Jobs />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/network"
-              element={
-                <ProtectedRoute>
-                  <Network />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/messaging"
-              element={
-                <ProtectedRoute>
-                  <Messaging />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile/:email"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/business"
-              element={
-                <ProtectedRoute>
-                  <Business />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <SocketProvider>
+        <NotificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route
+                  path="/home"
+                  element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/jobs"
+                  element={
+                    <ProtectedRoute>
+                      <Jobs />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/network"
+                  element={
+                    <ProtectedRoute>
+                      <Network />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/notifications"
+                  element={
+                    <ProtectedRoute>
+                      <Notifications />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/messaging"
+                  element={
+                    <ProtectedRoute>
+                      <Messaging />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile/:email"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/business"
+                  element={
+                    <ProtectedRoute>
+                      <Business />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/post/:id"
+                  element={
+                    <ProtectedRoute>
+                      <PostPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </NotificationProvider>
+      </SocketProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

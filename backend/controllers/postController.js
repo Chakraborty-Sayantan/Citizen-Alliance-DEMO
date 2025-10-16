@@ -27,6 +27,34 @@ export const getPosts = async (req, res) => {
   }
 };
 
+// @desc    Get a single post by ID
+// @route   GET /api/posts/:id
+// @access  Private
+export const getPostById = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id)
+            .populate('author', 'name title profileImage email')
+            .populate('comments.user', 'name title profileImage email')
+            .populate('originalPost')
+            .populate({
+                path: 'originalPost',
+                populate: {
+                    path: 'author',
+                    select: 'name title profileImage email'
+                }
+            });
+
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        res.json(post);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 // @desc    Get posts by user
 // @route   GET /api/posts/user/:userId
 // @access  Public
@@ -156,6 +184,36 @@ export const commentOnPost = async (req, res) => {
     res.status(500).send('Server Error');
   }
 };
+
+// @desc    Like or unlike a comment
+// @route   POST /api/posts/:postId/comment/:commentId/like
+// @access  Private
+export const likeComment = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.postId);
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
+
+        const comment = post.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ msg: 'Comment not found' });
+
+        const isLiked = comment.likes.some((like) => like.equals(req.user.id));
+
+        if (isLiked) {
+            comment.likes = comment.likes.filter((like) => !like.equals(req.user.id));
+        } else {
+            comment.likes.push(req.user.id);
+        }
+
+        await post.save();
+        await post.populate('author', 'name title profileImage email');
+        await post.populate('comments.user', 'name title profileImage email');
+
+        res.json(post);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+}
 
 // @desc    Reply to a comment
 // @route   POST /api/posts/:postId/comment/:commentId/reply
