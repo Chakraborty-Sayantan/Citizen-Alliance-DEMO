@@ -8,6 +8,7 @@ import userRoutes from './routes/userRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import { app, server, io } from './socket/socket.js'; 
+import jobRoutes from './routes/jobRoutes.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/jobs', jobRoutes);
 
 const PORT = process.env.PORT || 5000;
 

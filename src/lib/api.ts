@@ -104,6 +104,37 @@ export interface Notification {
     timestamp: string;
 }
 
+export interface Job {
+  job_id: string;
+  employer_logo: string;
+  employer_name: string;
+  job_title: string;
+  job_city: string;
+  job_state: string;
+  job_country: string;
+  job_employment_type: string;
+  job_description: string;
+  job_apply_link: string;
+  job_posted_at_datetime_utc: string;
+}
+
+interface SearchParams {
+  query: string;
+  location: string;
+  employment_type: string;
+  date_posted?: string;
+}
+
+export const searchJobs = async (params: SearchParams): Promise<Job[]> => {
+    const queryParams = new URLSearchParams(Object.entries(params));
+    const res = await fetch(`${API_URL}/jobs/search?${queryParams.toString()}`, {
+        headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to fetch jobs");
+    return res.json();
+}
+
+
 // --- Specific types for API function arguments ---
 type RegisterData = {
   name: string;

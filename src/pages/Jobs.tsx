@@ -1,211 +1,202 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Bookmark, MapPin, Building, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { searchJobs, Job } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { MapPin, Briefcase, ExternalLink, Search as SearchIcon } from "lucide-react";
+import { formatDistanceToNow } from 'date-fns';
 
 const Jobs = () => {
-  const { toast } = useToast();
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
-  
-  const jobs = [
-    {
-      title: "Senior Frontend Developer",
-      company: "TechCorp Inc.",
-      location: "San Francisco, CA",
-      salary: "$120k - $160k",
-      tags: ["Easy Apply", "Actively hiring"],
-      posted: "2 days ago"
-    },
-    {
-      title: "Product Manager",
-      company: "InnovateLabs",
-      location: "Remote",
-      salary: "$130k - $180k",
-      tags: ["Promoted"],
-      posted: "1 week ago"
-    },
-    {
-      title: "Full Stack Engineer",
-      company: "StartupXYZ",
-      location: "New York, NY",
-      salary: "$110k - $150k",
-      tags: ["Easy Apply", "Actively hiring"],
-      posted: "3 days ago"
-    },
-    {
-      title: "UX Designer",
-      company: "DesignHub",
-      location: "Austin, TX",
-      salary: "$90k - $120k",
-      tags: ["Easy Apply"],
-      posted: "5 days ago"
-    }
-  ];
+    const [query, setQuery] = useState("Software Engineer");
+    const [location, setLocation] = useState("India");
+    const [experience, setExperience] = useState("");
+    const [employmentType, setEmploymentType] = useState("FULLTIME");
+    const [datePosted, setDatePosted] = useState("all");
 
-  const handleSaveJob = (title: string) => {
-    if (savedJobs.includes(title)) {
-      setSavedJobs(savedJobs.filter(job => job !== title));
-      toast({
-        description: "Job removed from saved items",
-      });
-    } else {
-      setSavedJobs([...savedJobs, title]);
-      toast({
-        description: "Job saved",
-      });
-    }
-  };
+    // Construct the final search query including the experience level
+    const finalQuery = `${query} ${experience}`.trim();
 
-  const handleApply = (title: string, company: string) => {
-    toast({
-      title: "Application started",
-      description: `Applying to ${title} at ${company}`,
+    const { data: jobs, isLoading, error, refetch } = useQuery<Job[]>({
+        queryKey: ['jobs', finalQuery, location, employmentType, datePosted],
+        queryFn: () => searchJobs({ 
+            query: finalQuery, 
+            location, 
+            employment_type: employmentType,
+            date_posted: datePosted 
+        }),
+        enabled: false,
     });
-  };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3">
-            <Card className="p-4 sticky top-20">
-              <h3 className="font-semibold mb-4">Search filters</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Job type</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" className="rounded" />
-                      Full-time
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" className="rounded" />
-                      Part-time
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" className="rounded" />
-                      Contract
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Experience level</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" className="rounded" />
-                      Entry level
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" className="rounded" />
-                      Mid-Senior
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" className="rounded" />
-                      Director
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        refetch();
+    };
+    
+    useState(() => {
+        refetch();
+    });
 
-          <div className="lg:col-span-9 space-y-4">
-            <Card className="p-4 bg-gradient-to-r from-primary/10 to-primary/5">
-              <h2 className="text-xl font-bold mb-2">Are you hiring?</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Post a job to reach millions of professionals
-              </p>
-              <Button>Post a job</Button>
-            </Card>
+    return (
+        <div className="min-h-screen bg-background">
+            <Navbar />
+            <main className="container mx-auto px-6 py-6">
+                <header className="mb-8">
+                    <h1 className="text-4xl font-bold">Find Your Next Opportunity</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Explore thousands of job openings across India.
+                    </p>
+                </header>
 
-            <Card className="p-4">
-              <div className="flex gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search jobs" className="pl-10" />
-                </div>
-                <div className="relative flex-1">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Location" className="pl-10" />
-                </div>
-                <Button>Search</Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Showing {jobs.length} jobs based on your profile
-              </p>
-            </Card>
-
-            <div className="space-y-3">
-              {jobs.map((job, index) => (
-                <Card key={index} className="p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex gap-4 flex-1">
-                      <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center">
-                        <Building className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1">{job.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{job.company}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {job.location}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-4 w-4" />
-                            {job.salary}
-                          </span>
+                <Card className="mb-8">
+                    <CardContent className="p-6">
+                        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div className="md:col-span-2">
+                                <label htmlFor="query" className="block text-sm font-medium mb-1">Job title or keyword</label>
+                                <Input
+                                    id="query"
+                                    placeholder="e.g., 'React Developer'"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="location" className="block text-sm font-medium mb-1">Location</label>
+                                <Input
+                                    id="location"
+                                    placeholder="e.g., 'Mumbai'"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    <SearchIcon className="mr-2 h-4 w-4" />
+                                    {isLoading ? "Searching..." : "Find Jobs"}
+                                </Button>
+                            </div>
+                        </form>
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="text-sm font-medium">Job Type</label>
+                                <Select value={employmentType} onValueChange={setEmploymentType}>
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Select job type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="FULLTIME">Full-time</SelectItem>
+                                        <SelectItem value="PARTTIME">Part-time</SelectItem>
+                                        <SelectItem value="CONTRACTOR">Contract</SelectItem>
+                                        <SelectItem value="INTERN">Internship</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div>
+                                <label className="text-sm font-medium">Date Posted</label>
+                                <Select value={datePosted} onValueChange={setDatePosted}>
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Any time" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Any time</SelectItem>
+                                        <SelectItem value="today">Today</SelectItem>
+                                        <SelectItem value="3days">Last 3 days</SelectItem>
+                                        <SelectItem value="week">Last 7 days</SelectItem>
+                                        <SelectItem value="month">Last 30 days</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div>
+                                <label htmlFor="experience" className="block text-sm font-medium">Experience Level</label>
+                                <Input
+                                    id="experience"
+                                    placeholder="e.g., 'Senior' or 'Entry-level'"
+                                    value={experience}
+                                    onChange={(e) => setExperience(e.target.value)}
+                                    className="mt-1"
+                                />
+                            </div>
                         </div>
-                        <div className="flex gap-2 mb-2">
-                          {job.tags.map((tag, i) => (
-                            <Badge 
-                              key={i} 
-                              variant={tag === "Promoted" ? "default" : "secondary"}
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{job.posted}</p>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleSaveJob(job.title)}
-                    >
-                      <Bookmark 
-                        className={`h-5 w-5 ${savedJobs.includes(job.title) ? 'fill-primary text-primary' : ''}`}
-                      />
-                    </Button>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1"
-                      onClick={() => handleApply(job.title, job.company)}
-                    >
-                      Apply
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleSaveJob(job.title)}
-                    >
-                      {savedJobs.includes(job.title) ? 'Saved' : 'Save'}
-                    </Button>
-                  </div>
+                    </CardContent>
                 </Card>
-              ))}
-            </div>
-          </div>
+
+                 {/* Job listings section remains the same as before */}
+                 <div>
+                    {isLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <Card key={i}>
+                                    <CardHeader><Skeleton className="h-8 w-3/4" /></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <Skeleton className="h-4 w-1/2" />
+                                        <Skeleton className="h-4 w-1/3" />
+                                        <Skeleton className="h-10 w-full" />
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : error ? (
+                        <Card className="text-center p-8">
+                            <p className="text-destructive">Failed to load jobs. Please try again later.</p>
+                        </Card>
+                    ) : jobs && jobs.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {jobs.map((job) => (
+                                <Card key={job.job_id} className="flex flex-col">
+                                    <CardHeader>
+                                        <div className="flex items-start gap-4">
+                                            <img
+                                                src={job.employer_logo || '/placeholder.svg'}
+                                                alt={`${job.employer_name} logo`}
+                                                className="w-12 h-12 rounded-lg border object-contain"
+                                            />
+                                            <div>
+                                                <CardTitle className="text-lg">{job.job_title}</CardTitle>
+                                                <CardDescription className="font-semibold text-primary">{job.employer_name}</CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-grow space-y-3">
+                                        <div className="flex items-center text-sm text-muted-foreground gap-2">
+                                            <MapPin className="h-4 w-4" />
+                                            <span>{job.job_city}, {job.job_state}, {job.job_country}</span>
+                                        </div>
+                                        <div className="flex items-center text-sm text-muted-foreground gap-2">
+                                            <Briefcase className="h-4 w-4" />
+                                            <Badge variant="secondary">{job.job_employment_type?.replace("_", " ").toLowerCase()}</Badge>
+                                        </div>
+                                         <p className="text-sm text-muted-foreground line-clamp-3">
+                                            {job.job_description}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground pt-2">
+                                            Posted {formatDistanceToNow(new Date(job.job_posted_at_datetime_utc))} ago
+                                        </p>
+                                    </CardContent>
+                                    <div className="p-6 pt-0">
+                                        <a href={job.job_apply_link} target="_blank" rel="noopener noreferrer" className="w-full">
+                                            <Button className="w-full">
+                                                Apply Now
+                                                <ExternalLink className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </a>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className="text-center p-8">
+                             <h3 className="text-xl font-semibold">No Jobs Found</h3>
+                             <p className="text-muted-foreground mt-2">Try adjusting your search filters to find what you're looking for.</p>
+                        </Card>
+                    )}
+                </div>
+            </main>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Jobs;
