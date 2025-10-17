@@ -1,5 +1,3 @@
-// src/components/AuthForm.tsx
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +17,8 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { login as apiLogin, register as apiRegister } from "@/lib/api";
+import GoogleAuthButton from "./GoogleAuthButton";
+import { Separator } from "@/components/ui/separator";
 
 const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -85,6 +85,17 @@ const AuthForm = () => {
       <h2 className="text-3xl font-bold mb-4">
         {isSignUp ? "Join LinkLedge" : "Sign in"}
       </h2>
+      
+      {/* Google OAuth Button */}
+      <GoogleAuthButton mode={isSignUp ? "signup" : "signin"} />
+      
+      <div className="relative my-6">
+        <Separator />
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
+          OR
+        </span>
+      </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {isSignUp && (

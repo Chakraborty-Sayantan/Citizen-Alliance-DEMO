@@ -1,7 +1,6 @@
-// src/contexts/AuthContext.tsx
-
 import { createContext, useState, ReactNode, useCallback } from "react";
-import type { User } from "@/lib/api";
+import { User, fetchUserProfile } from "@/lib/api";
+import { jwtDecode } from "jwt-decode";
 
 export type { User };
 
@@ -12,6 +11,7 @@ export interface AuthContextType {
   login: (user: User, token: string) => void;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
+  loginWithToken: (token: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -52,9 +52,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
+  const loginWithToken = async (token: string) => {
+    try {
+      localStorage.setItem("token", token);
+      const decoded: { email: string } = jwtDecode(token);
+      const userProfile = await fetchUserProfile(decoded.email);
+      localStorage.setItem("user", JSON.stringify(userProfile));
+      setUser(userProfile);
+      setToken(token);
+    } catch (error) {
+      console.error("Failed to login with token:", error);
+      logout(); // Clear any partial login data on failure
+    }
+  };
+
+
+  const value = {
+    isAuthenticated,
+    user,
+    token,
+    login,
+    logout,
+    updateUser,
+    loginWithToken,
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, token, login, logout, updateUser }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
 };

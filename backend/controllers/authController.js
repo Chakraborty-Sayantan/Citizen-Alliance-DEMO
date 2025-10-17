@@ -73,3 +73,29 @@ export const loginUser = async (req, res) => {
         res.status(500).send('Server error');
     }
 };
+
+// Google OAuth callback
+export const googleAuthCallback = async (req, res) => {
+  try {
+    const user = req.user;
+    
+    const payload = {
+      id: user.id,
+    };
+
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: '5h' },
+      (err, token) => {
+        if (err) throw err;
+        
+        // Redirect to frontend with token
+        res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.redirect(`${process.env.FRONTEND_URL}?error=authentication_failed`);
+  }
+};

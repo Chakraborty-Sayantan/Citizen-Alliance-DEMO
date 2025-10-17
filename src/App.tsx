@@ -1,11 +1,11 @@
-import { useEffect } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "./hooks/useAuth";
+import { SocketProvider } from "./contexts/SocketContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Jobs from "./pages/Jobs";
@@ -17,8 +17,7 @@ import Settings from "./pages/Settings";
 import Business from "./pages/Business";
 import NotFound from "./pages/NotFound";
 import PostPage from "./pages/PostPage";
-import { SocketProvider } from "./contexts/SocketContext";
-import { NotificationProvider } from "./contexts/NotificationContext";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -27,17 +26,24 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/" />;
 };
 
+const Root = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Navigate to="/Home" /> : <Landing />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <SocketProvider>
         <NotificationProvider>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Landing />} />
+                <Route path="/" element={<Root />} />
+
+                {/* Add the new auth callback route here */}
+                <Route path="/auth/callback" element={<AuthCallback />} />
+
                 <Route
                   path="/home"
                   element={
@@ -72,6 +78,14 @@ const App = () => (
                 />
                 <Route
                   path="/messaging"
+                  element={
+                    <ProtectedRoute>
+                      <Messaging />
+                    </ProtectedRoute>
+                  }
+                />
+                 <Route
+                  path="/messaging/:userId"
                   element={
                     <ProtectedRoute>
                       <Messaging />
