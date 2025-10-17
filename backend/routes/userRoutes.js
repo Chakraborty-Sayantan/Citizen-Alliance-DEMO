@@ -5,6 +5,7 @@ import {
   searchUsers,
   sendConnectionRequest,
   acceptConnectionRequest,
+  rejectConnectionRequest,
   getNotifications,
   getConnections
 } from '../controllers/userController.js';
@@ -17,6 +18,7 @@ router.put('/profile', protect, updateUserProfile);
 router.get('/search', protect, searchUsers);
 router.post('/connect/:userId', protect, sendConnectionRequest);
 router.post('/accept/:userId', protect, acceptConnectionRequest);
+router.post('/reject/:userId', protect, rejectConnectionRequest);
 router.get('/notifications', protect, getNotifications);
 router.get('/connections', protect, getConnections);
 

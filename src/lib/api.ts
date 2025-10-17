@@ -332,7 +332,9 @@ export const updateUserProfile = async (profileData: Partial<User>): Promise<Use
 };
 
 export const fetchAllUsers = async (): Promise<User[]> => {
-  const res = await fetch(`${API_URL}/users`);
+  const res = await fetch(`${API_URL}/users/search?keyword=`, {
+      headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
 };
@@ -367,42 +369,41 @@ export const getConnections = async (): Promise<User[]> => {
 }
 
 export const sendConnectionRequest = async (toUserId: string): Promise<void> => {
-    const res = await fetch(`${API_URL}/users/connections/request`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ toUserId })
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.msg || "Failed to send connection request");
-    }
+  const res = await fetch(`${API_URL}/users/connect/${toUserId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.msg || "Failed to send connection request");
+  }
 };
 
 export const fetchConnectionRequests = async (): Promise<User[]> => {
-    const res = await fetch(`${API_URL}/users/connections/requests`, {
-        headers: getAuthHeaders(),
-    });
-    if (!res.ok) throw new Error("Failed to fetch connection requests");
-    return res.json();
+  const res = await fetch(`${API_URL}/users/profile/${localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).email : ''}`, {
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch connection requests");
+  const userData = await res.json();
+  return userData.connectionRequests || [];
 };
 
 export const acceptConnectionRequest = async (fromUserId: string): Promise<void> => {
-    const res = await fetch(`${API_URL}/users/connections/accept`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ fromUserId })
-    });
-    if (!res.ok) throw new Error("Failed to accept connection request");
+  const res = await fetch(`${API_URL}/users/accept/${fromUserId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to accept connection request");
 };
 
 export const rejectConnectionRequest = async (fromUserId: string): Promise<void> => {
-    const res = await fetch(`${API_URL}/users/connections/reject`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ fromUserId })
-    });
-    if (!res.ok) throw new Error("Failed to reject connection request");
+  const res = await fetch(`${API_URL}/users/reject/${fromUserId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to reject connection request");
 };
+
 
 export const disconnectUser = async (userId: string): Promise<void> => {
     const res = await fetch(`${API_URL}/users/connections/${userId}`, {

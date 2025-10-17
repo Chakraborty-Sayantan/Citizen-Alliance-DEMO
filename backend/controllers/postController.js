@@ -259,6 +259,40 @@ export const replyToComment = async (req, res) => {
     }
 }
 
+export const likeReply = async (req, res) => {
+  try {
+      const post = await Post.findById(req.params.postId);
+      if (!post) return res.status(404).json({ msg: 'Post not found' });
+
+      const comment = post.comments.id(req.params.commentId);
+      if (!comment) return res.status(404).json({ msg: 'Comment not found' });
+
+      const reply = comment.replies.id(req.params.replyId);
+      if (!reply) return res.status(404).json({ msg: 'Reply not found' });
+
+      const isLiked = reply.likes.some((like) => like.equals(req.user.id));
+
+      if (isLiked) {
+          reply.likes = reply.likes.filter((like) => !like.equals(req.user.id));
+      } else {
+          reply.likes.push(req.user.id);
+      }
+
+      await post.save();
+      await post
+          .populate('author', 'name title profileImage email')
+          .populate('comments.user', 'name title profileImage email')
+          .populate('comments.replies.user', 'name title profileImage email')
+          .execPopulate();
+
+      res.json(post);
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+  }
+};
+
+
 
 // @desc    Delete a post
 // @route   DELETE /api/posts/:id

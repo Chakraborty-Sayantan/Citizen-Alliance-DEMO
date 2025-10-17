@@ -2,7 +2,7 @@ import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,9 +29,9 @@ const Network = () => {
   });
 
   const { data: invitations, isLoading: isLoadingInvitations } = useQuery<User[]>({
-    queryKey: ["connectionRequests", currentUser?.email],
+    queryKey: ["connectionRequests", currentUser?._id],
     queryFn: () => fetchConnectionRequests(),
-    enabled: !!currentUser?.email,
+    enabled: !!currentUser?._id,
   });
 
   const acceptMutation = useMutation({
@@ -68,9 +68,7 @@ const Network = () => {
         title: "Invitation sent",
         description: `Connection request sent to ${targetUser?.name}`,
       });
-      queryClient.setQueryData(['users'], (oldData: User[] | undefined) => 
-        oldData ? oldData.filter(u => u._id !== toUserId) : []
-      );
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (error: Error) => {
         toast({
@@ -81,17 +79,7 @@ const Network = () => {
     }
   });
 
-  const currentUserConnectionIds =
-    currentUser?.connections?.map((c) => (typeof c === "string" ? c : c._id)) || [];
-  const invitationIds = invitations?.map(inv => inv._id) || [];
-
-  const suggestions =
-    users?.filter(
-      (u) =>
-        u._id !== currentUser?._id &&
-        !invitationIds.includes(u._id) &&
-        !currentUserConnectionIds.includes(u._id)
-    ) || [];
+  const suggestions = users || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -192,7 +180,7 @@ const Network = () => {
                       <Card key={person._id} className="p-4">
                         <div className="text-center">
                           <Avatar className="h-20 w-20 mx-auto mb-3">
-                            <AvatarImage src={person.profileImage} /> 
+                            <AvatarImage src={person.profileImage} />
                             <AvatarFallback className="text-xl">
                               {person.name
                                 .split(" ")

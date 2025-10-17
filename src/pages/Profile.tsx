@@ -78,15 +78,24 @@ const Profile = () => {
   });
 
   const connectMutation = useMutation({
-    mutationFn: () => sendConnectionRequest(profile?._id || ""),
+    
+    mutationFn: () => sendConnectionRequest(profile._id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", profileEmail] });
-      toast({
-        title: "Connection Request Sent",
-        description: `Your request to connect with ${profile?.name} has been sent.`,
-      });
+        toast({
+            title: "Connection Request Sent",
+            description: `Your request to connect with ${profile.name} has been sent.`,
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["profile", email] });
     },
-  });
+    onError: (error: Error) => {
+        toast({
+            title: "Error",
+            description: error.message || "Could not send connection request.",
+            variant: "destructive",
+        });
+    }
+});
 
   const handleMessageClick = () => {
     navigate('/messaging', { state: { selectedUser: profile } });

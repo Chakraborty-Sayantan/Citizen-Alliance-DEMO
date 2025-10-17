@@ -1,57 +1,18 @@
-// src/components/PostCard.tsx
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import {  Card,  CardContent,  CardFooter,  CardHeader,} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  ThumbsUp,
-  MessageSquare,
-  Repeat2,
-  Send,
-  FileText,
-  UserPlus,
-  Trash2,
-  MoreHorizontal,
-} from "lucide-react";
+import {  ThumbsUp,  MessageSquare,  Repeat2,  Send,  FileText,  UserPlus,  Trash2,  MoreHorizontal,} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Post,
-  likePost,
-  commentOnPost,
-  User,
-  sendConnectionRequest,
-  deletePost,
-  repostPost,
-  replyToComment,
-  likeComment,
-} from "@/lib/api";
+import {  Post,  likePost,  commentOnPost,  User,  sendConnectionRequest,  deletePost,  repostPost,  replyToComment,  likeComment,} from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "./ui/input";
 import { Link } from "react-router-dom";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
+import {  AlertDialog,  AlertDialogAction, AlertDialogCancel,  AlertDialogContent,  AlertDialogDescription,  AlertDialogFooter,  AlertDialogHeader,
+  AlertDialogTitle,  AlertDialogTrigger,} from "@/components/ui/alert-dialog";
+import {    DropdownMenu,    DropdownMenuContent,    DropdownMenuItem,    DropdownMenuTrigger,  } from "@/components/ui/dropdown-menu"
 
 const PostCard = (post: Post) => {
   const [showComments, setShowComments] = useState(false);
@@ -64,6 +25,21 @@ const PostCard = (post: Post) => {
 
   const displayPost = post.isRepost && post.originalPost ? post.originalPost : post;
 
+  const updatePostInCache = (updatedPost: Post) => {
+    queryClient.setQueryData(['posts'], (oldData: Post[] | undefined) => {
+      if (!oldData) return [];
+      return oldData.map((p) => {
+        if (p._id === updatedPost._id) {
+          return updatedPost;
+        }
+        if (p.isRepost && p.originalPost?._id === updatedPost._id) {
+          return { ...p, originalPost: updatedPost };
+        }
+        return p;
+      });
+    });
+  };
+
   const isLiked = user ? displayPost.likes.includes(user._id) : false;
   const isOwnPost = user?._id === displayPost.author._id;
   const isConnected = user?.connections?.some(
@@ -74,29 +50,22 @@ const PostCard = (post: Post) => {
   const likeMutation = useMutation({
     mutationFn: () => likePost(displayPost._id),
     onSuccess: (updatedPost) => {
-      queryClient.setQueryData(["posts"], (oldData: Post[] | undefined) =>
-        oldData
-          ? oldData.map((p) => (p._id === updatedPost._id ? updatedPost : p))
-          : []
-      );
+      updatePostInCache(updatedPost);
     },
   });
 
   const commentMutation = useMutation({
     mutationFn: (newComment: { text: string; author: User }) =>
       commentOnPost(displayPost._id, newComment),
-    onSuccess: (updatedPost) => {
-      queryClient.setQueryData(["posts"], (oldData: Post[] | undefined) =>
-        oldData
-          ? oldData.map((p) => (p._id === updatedPost._id ? updatedPost : p))
-          : []
-      );
+      onSuccess: (updatedPost) => {
+      updatePostInCache(updatedPost);
       setCommentText("");
       toast({
         description: "Comment added",
       });
     },
   });
+  
   
   const connectMutation = useMutation({
     mutationFn: () => sendConnectionRequest(displayPost.author._id),
@@ -132,7 +101,7 @@ const PostCard = (post: Post) => {
   const replyMutation = useMutation({
       mutationFn: ({ postId, commentId, reply }: { postId: string, commentId: string, reply: { text: string }}) => replyToComment(postId, commentId, reply),
       onSuccess: (updatedPost) => {
-          queryClient.setQueryData(['posts'], (oldData: Post[] | undefined) => oldData ? oldData.map(p => p._id === updatedPost._id ? updatedPost : p) : []);
+          updatePostInCache(updatedPost);
           setReplyingTo(null);
           setReplyText("");
           toast({ description: "Reply posted" });
@@ -142,7 +111,7 @@ const PostCard = (post: Post) => {
   const commentLikeMutation = useMutation({
     mutationFn: ({ postId, commentId }: { postId: string, commentId: string }) => likeComment(postId, commentId),
     onSuccess: (updatedPost) => {
-        queryClient.setQueryData(['posts'], (oldData: Post[] | undefined) => oldData ? oldData.map(p => p._id === updatedPost._id ? updatedPost : p) : []);
+      updatePostInCache(updatedPost);
     }
   })
 
