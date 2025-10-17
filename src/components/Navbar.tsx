@@ -77,11 +77,11 @@ const Navbar = () => {
           <div className="flex items-center gap-2">
             <Link to="/home" className="flex items-center gap-2">
               <img
-                src="/logo.jpeg"
+                src="/Linkledge_logo.png"
                 alt="LinkLedge Logo"
-                className="h-8 w-8 rounded-full object-cover"
+                className="h-48 w-48 object-contain"
               />
-              <h1 className="text-xl font-bold text-primary">LinkLedge</h1>
+{/*               <h1 className="text-xl font-bold text-primary">LinkLedge</h1> */}
             </Link>
 {/*             <form onSubmit={handleSearch} className="relative hidden md:block ml-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

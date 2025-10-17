@@ -45,23 +45,23 @@ const Sidebar = () => {
             </p>
           </div>
         </Link>
-        <div className="flex justify-between items-center px-4 py-4 border-t text-sm">
+        <div className="items-center px-4 py-4 border-t text-sm">
           <div>
             <p className="text-muted-foreground">Connections</p>
             <p className="font-semibold text-primary">
               {user?.connections?.length || 0}
             </p>
           </div>
-          <div>
+{/*           <div>
             <p className="text-muted-foreground">Profile views</p>
             <p className="font-semibold text-primary">
               {user?.profileViews || 0}
             </p>
-          </div>
+          </div> */}
         </div>
       </Card>
 
-      <Card className="p-4">
+      {/* <Card className="p-4">
         <div className="space-y-3">
           <Button
             variant="ghost"
@@ -93,7 +93,7 @@ const Sidebar = () => {
         <p className="text-xs text-muted-foreground">
           Get access to exclusive tools and insights
         </p>
-      </Card>
+      </Card> */}
     </div>
   );
 };
