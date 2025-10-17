@@ -40,7 +40,7 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const handleSearch = (e: React.FormEvent) => {
+/*   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       toast({
@@ -48,7 +48,7 @@ const Navbar = () => {
         description: `Searching for: ${searchQuery}`,
       });
     }
-  };
+  }; */
 
   const handleViewProfile = () => {
     navigate("/profile");
@@ -83,7 +83,7 @@ const Navbar = () => {
               />
               <h1 className="text-xl font-bold text-primary">LinkLedge</h1>
             </Link>
-            <form onSubmit={handleSearch} className="relative hidden md:block ml-2">
+{/*             <form onSubmit={handleSearch} className="relative hidden md:block ml-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search"
@@ -91,7 +91,7 @@ const Navbar = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </form>
+            </form> */}
           </div>
 
           <div className="flex items-center">

@@ -12,6 +12,26 @@ import { fetchPosts, fetchNews, Post, NewsArticle } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import NewsCard from "@/components/NewsCard";
+import { motion } from "framer-motion";
+
+// Animation variants for the container and its items
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+  },
+};
 
 const Home = () => {
   const [createPostOpen, setCreatePostOpen] = useState(false);
@@ -44,7 +64,12 @@ const Home = () => {
             <Sidebar />
           </div>
 
-          <div className="lg:col-span-6 space-y-4">
+          <motion.div
+            className="lg:col-span-6 space-y-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             <Card className="p-4">
               <div className="flex items-center gap-3 mb-4">
                 <Avatar>
@@ -58,42 +83,53 @@ const Home = () => {
                       : "U"}
                   </AvatarFallback>
                 </Avatar>
-                <Button
-                  variant="outline"
-                  className="flex-1 justify-start text-muted-foreground"
-                  onClick={() => setCreatePostOpen(true)}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="flex-1"
                 >
-                  Start a post
-                </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 justify-start text-muted-foreground w-full"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    Start a post
+                  </Button>
+                </motion.div>
               </div>
               <div className="flex items-center justify-around">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-primary"
-                  onClick={() => setCreatePostOpen(true)}
-                >
-                  <Image className="h-5 w-5" />
-                  <span className="text-sm">Photo</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-green-600"
-                  onClick={() => setCreatePostOpen(true)}
-                >
-                  <Video className="h-5 w-5" />
-                  <span className="text-sm">Video</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-orange-600"
-                  onClick={() => setCreatePostOpen(true)}
-                >
-                  <FileText className="h-5 w-5" />
-                  <span className="text-sm">Article</span>
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-primary"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    <Image className="h-5 w-5" />
+                    <span className="text-sm">Photo</span>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-green-600"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    <Video className="h-5 w-5" />
+                    <span className="text-sm">Video</span>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-orange-600"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    <FileText className="h-5 w-5" />
+                    <span className="text-sm">Article</span>
+                  </Button>
+                </motion.div>
               </div>
             </Card>
 
@@ -104,24 +140,30 @@ const Home = () => {
 
             {isLoadingPosts ? (
               <div className="space-y-4">
-                <Card className="p-4 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-[150px]" />
-                      <Skeleton className="h-4 w-[100px]" />
+                {[1, 2].map((i) => (
+                  <Card key={i} className="p-4 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[150px]" />
+                        <Skeleton className="h-4 w-[100px]" />
+                      </div>
                     </div>
-                  </div>
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                </Card>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </Card>
+                ))}
               </div>
             ) : postsError ? (
               <p className="text-destructive">Failed to load posts.</p>
             ) : (
-              posts?.map((post) => <PostCard key={post._id} {...post} />)
+              posts?.map((post) => (
+                <motion.div variants={itemVariants} key={post._id}>
+                  <PostCard {...post} />
+                </motion.div>
+              ))
             )}
-          </div>
+          </motion.div>
 
           <div className="lg:col-span-3">
             <Card className="p-4">
@@ -140,7 +182,13 @@ const Home = () => {
                   </p>
                 ) : (
                   news?.map((article, index) => (
-                    <NewsCard key={index} {...article} />
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.03, x: 5 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                    >
+                      <NewsCard {...article} />
+                    </motion.div>
                   ))
                 )}
               </div>
